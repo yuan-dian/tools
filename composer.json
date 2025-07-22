@@ -1,0 +1,31 @@
+{
+  "name": "yuandian/tools",
+  "description": "A component for tools.",
+  "type": "library",
+  "keywords": [
+    "php",
+    "tools",
+    "bean",
+    "mapper"
+  ],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "yuandian",
+      "email": "467490186@qq.com"
+    }
+  ],
+  "require": {
+    "php": ">=8.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "yuandian\\Tools\\": "src"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "yuandian\\Tools\\Tests\\": "tests"
+    }
+  }
+}
