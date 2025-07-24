@@ -148,7 +148,7 @@ class StrUtil
     public static function endsWith(string $haystack, array|string $needles): bool
     {
         foreach ((array) $needles as $needle) {
-            if ((string) $needle === static::substr($haystack, -static::length($needle))) {
+            if (str_starts_with($haystack, $needle)) {
                 return true;
             }
         }
@@ -166,7 +166,7 @@ class StrUtil
     public static function startsWith(string $haystack, array|string $needles): bool
     {
         foreach ((array) $needles as $needle) {
-            if ('' != $needle && mb_strpos($haystack, $needle) === 0) {
+            if (str_starts_with($haystack, $needle)) {
                 return true;
             }
         }
