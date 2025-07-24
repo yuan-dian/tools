@@ -80,7 +80,7 @@ class ArrayToObjectMapper
         if (is_string($value)) {
             $trim = $property->getAttribute(Trim::class);
             if ($trim) {
-                $value = trim($value, $trim->value);
+                $value = trim($value, $trim->characters);
             }
         }
         // 处理单一类型
@@ -160,6 +160,7 @@ class ArrayToObjectMapper
      * @param PHPReflectionProperty $property
      * @return mixed
      * @date 2025/7/18 下午2:35
+     * @throws \ReflectionException
      * @author 原点 467490186@qq.com
      */
     private function handleUnionType(
@@ -167,8 +168,18 @@ class ArrayToObjectMapper
         ReflectionUnionType $type,
         PHPReflectionProperty $property
     ): mixed {
+        $valueTypeName = self::getPhpTypeName($value);
+        $types = $type->getTypes();
+        // 优先匹配精确类型
+        foreach ($types as $subType) {
+            if ($valueTypeName === $subType->getName()) {
+                return $this->resolveValue($property, $value, $subType);
+            }
+        }
+
+        // 类型转换尝试
         $errors = [];
-        foreach ($type->getTypes() as $subType) {
+        foreach ($types as $subType) {
             try {
                 return $this->resolveValue($property, $value, $subType);
             } catch (\Throwable $e) {
@@ -183,7 +194,25 @@ class ArrayToObjectMapper
             )
         );
     }
-
+    /**
+     * 获取PHP的原生类型名称
+     *
+     * @param $value
+     * @return string
+     * @date 2024/8/23 11:57
+     * @author 原点 467490186@qq.com
+     */
+    private static function getPhpTypeName($value): string
+    {
+        $type = gettype($value);
+        return match ($type) {
+            'integer' => 'int',
+            'double' => 'float',
+            'boolean' => 'bool',
+            'NULL' => 'null',
+            default => $type,
+        };
+    }
     /**
      * 处理交叉类型
      * @param mixed $value
