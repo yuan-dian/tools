@@ -148,7 +148,7 @@ class StrUtil
     public static function endsWith(string $haystack, array|string $needles): bool
     {
         foreach ((array) $needles as $needle) {
-            if (str_starts_with($haystack, $needle)) {
+            if (str_ends_with($haystack, $needle)) {
                 return true;
             }
         }
