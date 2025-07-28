@@ -24,7 +24,7 @@ use yuandian\Tools\attribute\MapTo;
 use yuandian\Tools\attribute\Skip;
 use yuandian\Tools\attribute\Trim;
 use yuandian\Tools\reflection\ClassReflector;
-use yuandian\Tools\reflection\PHPReflectionProperty;
+use yuandian\Tools\reflection\PropertyReflection;
 
 /**
  * 数组转对象
@@ -62,7 +62,7 @@ class ArrayToObjectMapper
     }
 
     /**
-     * @param PHPReflectionProperty $property
+     * @param PropertyReflection $property
      * @param mixed $value
      * @param ReflectionType|null $type
      * @return mixed
@@ -70,7 +70,7 @@ class ArrayToObjectMapper
      * @date 2025/7/18 下午2:40
      * @author 原点 467490186@qq.com
      */
-    public function resolveValue(PHPReflectionProperty $property, mixed $value, ?ReflectionType $type): mixed
+    public function resolveValue(PropertyReflection $property, mixed $value, ?ReflectionType $type): mixed
     {
         // 处理null值
         if ($value === null && $type->allowsNull()) {
@@ -104,7 +104,7 @@ class ArrayToObjectMapper
      * 处理单一类型
      * @param mixed $value
      * @param ReflectionNamedType $type
-     * @param PHPReflectionProperty $property
+     * @param PropertyReflection $property
      * @return mixed
      * @throws \ReflectionException
      * @date 2025/7/18 下午2:35
@@ -113,7 +113,7 @@ class ArrayToObjectMapper
     private function handleNamedType(
         mixed $value,
         ReflectionNamedType $type,
-        PHPReflectionProperty $property
+        PropertyReflection $property
     ): mixed {
         $typeName = $type->getName();
         // 处理对象数组
@@ -157,7 +157,7 @@ class ArrayToObjectMapper
      * 处理联合类型
      * @param mixed $value
      * @param ReflectionUnionType $type
-     * @param PHPReflectionProperty $property
+     * @param PropertyReflection $property
      * @return mixed
      * @date 2025/7/18 下午2:35
      * @throws \ReflectionException
@@ -166,7 +166,7 @@ class ArrayToObjectMapper
     private function handleUnionType(
         mixed $value,
         ReflectionUnionType $type,
-        PHPReflectionProperty $property
+        PropertyReflection $property
     ): mixed {
         $valueTypeName = self::getPhpTypeName($value);
         $types = $type->getTypes();
@@ -217,7 +217,7 @@ class ArrayToObjectMapper
      * 处理交叉类型
      * @param mixed $value
      * @param ReflectionIntersectionType $type
-     * @param PHPReflectionProperty $property
+     * @param PropertyReflection $property
      * @return mixed
      * @throws \ReflectionException
      * @date 2025/7/18 下午3:02
@@ -226,7 +226,7 @@ class ArrayToObjectMapper
     private function handleIntersectionType(
         mixed $value,
         ReflectionIntersectionType $type,
-        PHPReflectionProperty $property
+        PropertyReflection $property
     ): mixed {
 
         // 1. 检查是否指定了具体实现类

@@ -26,7 +26,7 @@ trait AttributesTrait
      */
     public function hasAttribute(string $name): bool
     {
-        return $this->getReflection()->getAttributes($name) !== [];
+        return !empty($this->getReflection()->getAttributes($name));
     }
 
     /**

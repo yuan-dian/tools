@@ -97,33 +97,38 @@ class ClassReflector
 
     /**
      * 获取对象公共属性
-     * @return PHPReflectionProperty[]
+     * @return PropertyReflection[]
      * @date 2025/7/17 下午5:28
      * @author 原点 467490186@qq.com
      */
     public function getPublicProperties(): array
     {
         return array_map(
-            fn(ReflectionProperty $property) => new PHPReflectionProperty($property),
+            fn(ReflectionProperty $property) => new PropertyReflection($property),
             $this->reflectionClass->getProperties(ReflectionProperty::IS_PUBLIC),
         );
     }
 
     /**
-     * @throws \ReflectionException
-     */
-    /**
+     * 获取类属性的 ReflectionProperty
      * @param $name
-     * @return PHPReflectionProperty
+     * @return PropertyReflection
      * @throws \ReflectionException
      * @date 2025/7/21 下午1:48
      * @author 原点 467490186@qq.com
      */
-    public function getProperty($name): PHPReflectionProperty
+    public function getProperty($name): PropertyReflection
     {
-        return new PHPReflectionProperty($this->reflectionClass->getProperty($name));
+        return new PropertyReflection($this->reflectionClass->getProperty($name));
     }
 
+    /**
+     * 检查是否定义了属性
+     * @param $name
+     * @return bool
+     * @date 2025/7/25 下午5:38
+     * @author 原点 467490186@qq.com
+     */
     public function hasProperty($name): bool
     {
         return $this->reflectionClass->hasProperty($name);

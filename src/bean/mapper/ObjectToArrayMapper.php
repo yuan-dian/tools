@@ -19,7 +19,7 @@ use yuandian\Tools\attribute\Alias;
 use yuandian\Tools\attribute\ArrayOf;
 use yuandian\Tools\attribute\Skip;
 use yuandian\Tools\reflection\ClassReflector;
-use yuandian\Tools\reflection\PHPReflectionProperty;
+use yuandian\Tools\reflection\PropertyReflection;
 
 /**
  * 对象转数组
@@ -53,7 +53,7 @@ class ObjectToArrayMapper
         return $arrayProperties;
     }
 
-    private function resolvePropertyName(PHPReflectionProperty $property): string
+    private function resolvePropertyName(PropertyReflection $property): string
     {
         $alias = $property->getAttribute(Alias::class);
 
@@ -65,14 +65,14 @@ class ObjectToArrayMapper
     }
 
     /**
-     * @param PHPReflectionProperty $property
+     * @param PropertyReflection $property
      * @param object $object
      * @return mixed
      * @throws \ReflectionException
      * @date 2025/7/18 下午5:03
      * @author 原点 467490186@qq.com
      */
-    private function resolvePropertyValue(PHPReflectionProperty $property, object $object): mixed
+    private function resolvePropertyValue(PropertyReflection $property, object $object): mixed
     {
         $propertyName = $property->getName();
 
@@ -116,13 +116,13 @@ class ObjectToArrayMapper
     /**
      * @param mixed $value
      * @param string $fieldName
-     * @param PHPReflectionProperty $property
+     * @param PropertyReflection $property
      * @return mixed
      * @throws \ReflectionException
      * @date 2025/7/18 下午5:18
      * @author 原点 467490186@qq.com
      */
-    private function convertValueToArray(mixed $value, string $fieldName, PHPReflectionProperty $property): mixed
+    private function convertValueToArray(mixed $value, string $fieldName, PropertyReflection $property): mixed
     {
         if ($value === null) {
             return null;

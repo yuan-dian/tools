@@ -13,13 +13,10 @@ declare (strict_types=1);
 
 namespace yuandian\Tools\reflection;
 
-use ReflectionClass;
-use ReflectionMethod;
-use ReflectionParameter;
 use ReflectionProperty;
 use yuandian\Tools\attribute\Alias;
 
-class PHPReflectionProperty
+class PropertyReflection
 {
     use AttributesTrait;
     public function __construct(
@@ -60,7 +57,7 @@ class PHPReflectionProperty
         return $this->reflectionProperty->isReadOnly();
     }
 
-    public function getReflection(): ReflectionClass|ReflectionMethod|ReflectionProperty|ReflectionParameter
+    public function getReflection(): ReflectionProperty
     {
         return $this->reflectionProperty;
     }
