@@ -109,6 +109,14 @@ class ClassReflector
         );
     }
 
+    public function getProperties(): array
+    {
+        return array_map(
+            fn(ReflectionProperty $property) => new PropertyReflection($property),
+            $this->reflectionClass->getProperties(),
+        );
+    }
+
     /**
      * 获取类属性的 ReflectionProperty
      * @param $name
