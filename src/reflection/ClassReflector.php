@@ -134,6 +134,27 @@ class ClassReflector
         return $this->reflectionClass->hasProperty($name);
     }
 
+    public function hasMethod($name): bool
+    {
+        return $this->reflectionClass->hasMethod($name);
+    }
+
+    public function getMethod(string $name): MethodReflector
+    {
+        return new MethodReflector($this->reflectionClass->getMethod($name));
+    }
+
+    public function getConstructor(): ?MethodReflector
+    {
+        $constructor = $this->reflectionClass->getConstructor();
+
+        if ($constructor === null) {
+            return null;
+        }
+
+        return new MethodReflector($constructor);
+    }
+
     public function getReflection(): ReflectionClass
     {
         return $this->reflectionClass;
