@@ -109,6 +109,12 @@ class ClassReflector
         );
     }
 
+    /**
+     * 获取对象全部属性
+     * @return PropertyReflection[]
+     * @date 2025/7/17 下午5:28
+     * @author 原点 467490186@qq.com
+     */
     public function getProperties(): array
     {
         return array_map(

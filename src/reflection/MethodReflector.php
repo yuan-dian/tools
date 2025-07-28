@@ -45,7 +45,6 @@ class MethodReflector
     /**
      * @param string $name
      * @return ParameterReflector|null
-     * @throws \ReflectionException
      * @date 2025/7/28 下午2:29
      * @author 原点 467490186@qq.com
      */
@@ -94,6 +93,10 @@ class MethodReflector
     public function isStatic(): bool
     {
         return $this->reflectionMethod->isStatic();
+    }
+    public function isPublic(): bool
+    {
+        return $this->reflectionMethod->isPublic();
     }
 
     public function __call(string $name, array $args = []): mixed
