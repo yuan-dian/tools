@@ -24,9 +24,10 @@ class BeanUtil
 {
     /**
      * 数组转对象
+     * @template T of object
      * @param array $from
-     * @param string|object $to
-     * @return object
+     * @param class-string<T> $to
+     * @return T
      * @throws \ReflectionException
      * @date 2025/7/21 上午11:13
      * @author 原点 467490186@qq.com
@@ -70,9 +71,10 @@ class BeanUtil
 
     /**
      * 对象转对象
+     * @template T of object
      * @param object $from
-     * @param string|object $to
-     * @return object
+     * @param class-string<T> $to
+     * @return T
      * @throws \ReflectionException
      * @date 2025/7/21 上午11:14
      * @author 原点 467490186@qq.com
