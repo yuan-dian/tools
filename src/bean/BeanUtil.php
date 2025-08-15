@@ -95,7 +95,7 @@ class BeanUtil
      * @date 2025/7/21 上午11:14
      * @author 原点 467490186@qq.com
      */
-    public static function JsonToObject(string $from, string|object $to): object
+    public static function jsonToObject(string $from, string|object $to): object
     {
         if(function_exists("json_validate") &&  !json_validate($from)){
             throw new \Exception("json_validate failed");
