@@ -1,0 +1,95 @@
+<?php
+// +----------------------------------------------------------------------
+// | 
+// +----------------------------------------------------------------------
+// | @copyright (c) 原点 All rights reserved.
+// +----------------------------------------------------------------------
+// | Author: 原点 <467490186@qq.com>
+// +----------------------------------------------------------------------
+// | Date: 2025/6/26
+// +----------------------------------------------------------------------
+
+declare (strict_types=1);
+
+namespace yuandian\Tools\utils;
+
+/**
+ * 雪花算法
+ */
+class SnowflakeUtil
+{
+    /**
+     * 时间起始标记点，作为基准，一般取系统的最近时间（一旦确定不能变动）
+     * @var int
+     */
+    private static int $epoch = 1288834974657;
+    private static ?int $workerId = null;
+    private static int $datacenterId = 0;
+    private static int $sequence = 0;
+    private static int $lastTimestamp = -1;
+    private static int $maxWorkerId = -1 ^ (-1 << 5);
+    private static ?string $localIP = null;
+
+    protected static function getWorkerId(): int
+    {
+        if (self::$workerId === null) {
+            $ipNum = ip2long(self::getLocalIP());
+            self::$workerId = $ipNum % self::$maxWorkerId;
+        }
+        return self::$workerId;
+    }
+
+    public static function nextId(): int
+    {
+        $timestamp = static::timeGen();
+
+        if ($timestamp == static::$lastTimestamp) {
+            static::$sequence = (static::$sequence + 1) & 4095; // 序列号循环使用，最大4095
+            if (static::$sequence == 0) {
+                // 序列号溢出，等待下一毫秒
+                $timestamp = static::tilNextMillis(static::$lastTimestamp);
+            }
+        } else {
+            static::$sequence = 0; // 重置序列号
+        }
+
+        static::$lastTimestamp = $timestamp;
+
+        return (($timestamp - static::$epoch) << 22)
+            | (static::$datacenterId << 17)
+            | static::getWorkerId() << 5
+            | static::$sequence;
+    }
+
+    private static function tilNextMillis($lastTimestamp): int
+    {
+        $timestamp = static::timeGen();
+        while ($timestamp <= $lastTimestamp) {
+            $timestamp = static::timeGen();
+        }
+        return $timestamp;
+    }
+
+    private static function timeGen(): int
+    {
+        return (int)(microtime(true) * 1000); // 毫秒级时间戳
+    }
+
+    public static function getLocalIP():string
+    {
+        if (self::$localIP === null) {
+            try {
+                $hostName = gethostname();
+                $serverIP = gethostbyname($hostName);
+            }catch (\Throwable $exception){
+
+            }
+            if (!filter_var($serverIP, FILTER_VALIDATE_IP)) {
+                $serverIP = '127.0.0.1';
+            }
+            self::$localIP = $serverIP;
+        }
+
+        return self::$localIP;
+    }
+}

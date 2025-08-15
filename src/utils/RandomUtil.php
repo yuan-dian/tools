@@ -13,6 +13,7 @@ declare (strict_types=1);
 
 namespace yuandian\Tools\utils;
 
+
 class RandomUtil
 {
     /**
@@ -35,7 +36,7 @@ class RandomUtil
      * @param int $max
      * @return int
      * @throws \Random\RandomException
-     * @date 2025/7/23 下午1:45
+     * @date 2025/8/15 下午2:30
      * @author 原点 467490186@qq.com
      */
     public static function randomInt(int $min = 0, int $max = PHP_INT_MAX): int
@@ -170,13 +171,7 @@ class RandomUtil
      */
     public static function randomUUID(): string
     {
-        return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-            mt_rand(0, 0xffff),
-            mt_rand(0, 0x0fff) | 0x4000,
-            mt_rand(0, 0x3fff) | 0x8000,
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-        );
+        return UUIDUtil::randomUUID();
     }
 
     /**
@@ -188,7 +183,7 @@ class RandomUtil
      */
     public static function randomSimpleUUID(): string
     {
-        return bin2hex(random_bytes(16));
+        return UUIDUtil::simpleUUID();
     }
 
     /**
@@ -262,14 +257,15 @@ class RandomUtil
      * @param string $start
      * @param string $end
      * @return \DateTime
-     * @date 2025/7/23 下午1:49
+     * @throws \Random\RandomException
+     * @date 2025/8/15 下午2:32
      * @author 原点 467490186@qq.com
      */
     public static function randomDate(string $start = '1970-01-01', string $end = 'now'): \DateTime
     {
         $startTs = strtotime($start);
         $endTs = strtotime($end);
-        $randomTs = mt_rand($startTs, $endTs);
+        $randomTs = random_int($startTs, $endTs);
         return (new \DateTime())->setTimestamp($randomTs);
     }
 }
