@@ -84,4 +84,23 @@ class BeanUtil
         return (new ObjectToObjectMapper())->map($from, $to);
     }
 
+    /**
+     * json字符串转对象
+     * @template T of object
+     * @param string $from
+     * @param class-string<T> $to
+     * @return T
+     * @throws \ReflectionException
+     * @throws \Exception
+     * @date 2025/7/21 上午11:14
+     * @author 原点 467490186@qq.com
+     */
+    public static function JsonToObject(string $from, string|object $to): object
+    {
+        if(function_exists("json_validate") &&  !json_validate($from)){
+            throw new \Exception("json_validate failed");
+        }
+        return (new ArrayToObjectMapper())->map(json_decode($from, true), $to);
+    }
+
 }
