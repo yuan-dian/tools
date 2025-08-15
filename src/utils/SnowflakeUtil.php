@@ -15,6 +15,7 @@ namespace yuandian\Tools\utils;
 
 /**
  * 雪花算法
+ * workerId默认使用本机IP地址
  */
 class SnowflakeUtil
 {
@@ -75,6 +76,12 @@ class SnowflakeUtil
         return (int)(microtime(true) * 1000); // 毫秒级时间戳
     }
 
+    /**
+     * 获取本机IP
+     * @return string
+     * @date 2025/8/15 下午2:38
+     * @author 原点 467490186@qq.com
+     */
     public static function getLocalIP():string
     {
         if (self::$localIP === null) {
@@ -82,8 +89,9 @@ class SnowflakeUtil
                 $hostName = gethostname();
                 $serverIP = gethostbyname($hostName);
             }catch (\Throwable $exception){
-
+                $serverIP = '127.0.0.1';
             }
+            // 判断是否是真实IP地址
             if (!filter_var($serverIP, FILTER_VALIDATE_IP)) {
                 $serverIP = '127.0.0.1';
             }
