@@ -43,6 +43,10 @@ class ObjectToArrayMapper
         $class = new ClassReflector($from);
         $arrayProperties = [];
         foreach ($class->getPublicProperties() as $property) {
+            // 判断属性是否初始化
+            if(!$property->isInitialized($from)) {
+                continue;
+            }
             if($property->hasAttribute(Skip::class)) {
                 continue;
             }
