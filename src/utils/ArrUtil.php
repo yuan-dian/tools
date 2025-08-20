@@ -480,7 +480,6 @@ class ArrUtil
     }
 
 
-
     /**
      * 使用 “.”表示法从给定数组中删除一个或多个数组项。
      *
@@ -493,7 +492,7 @@ class ArrUtil
     {
         $original = &$array;
 
-        $keys = (array) $keys;
+        $keys = (array)$keys;
 
         if (count($keys) === 0) {
             return;
@@ -537,7 +536,7 @@ class ArrUtil
      */
     public static function has(ArrayAccess|array $array, array|string $keys): bool
     {
-        $keys = (array) $keys;
+        $keys = (array)$keys;
 
         if (!$array || $keys === []) {
             return false;
@@ -573,7 +572,7 @@ class ArrUtil
      */
     public static function only(array $array, array|string $keys): array
     {
-        return array_intersect_key($array, array_flip((array) $keys));
+        return array_intersect_key($array, array_flip((array)$keys));
     }
 
     /**
@@ -609,12 +608,13 @@ class ArrUtil
 
         $results = [];
 
-        foreach ((array) $keys as $key) {
+        foreach ((array)$keys as $key) {
             $results[] = $array[$key];
         }
 
         return $results;
     }
+
     /**
      * 打乱给定的数组并返回结果
      *
@@ -672,5 +672,24 @@ class ArrUtil
     public static function isList(array $array): bool
     {
         return array_is_list($array);
+    }
+
+    /**
+     * 将数组键名由下划线转驼峰【首字母小写】
+     * @param array $data
+     * @return array
+     * @date 2025/8/18 下午3:25
+     * @author 原点 467490186@qq.com
+     */
+    public static function camel(array $data): array
+    {
+        $result = [];
+        foreach ($data as $key => $value) {
+            $result[StrUtil::camel($key)] = is_array($value)
+                ? self::camel($value)
+                : $value;
+        }
+
+        return $result;
     }
 }
