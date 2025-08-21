@@ -21,28 +21,44 @@ class SnowflakeUtil
 {
     /**
      * 时间起始标记点，作为基准，一般取系统的最近时间（一旦确定不能变动）
+     * 2025-01-01 00:00:00.000
      * @var int
      */
-    private static int $epoch = 1288834974657;
+    private static int $epoch = 1735660800000;
+
+    // 机器ID(0-31)
+    private static ?int $datacenterId = null;
+
+    // 工作进程ID(0-31)
     private static ?int $workerId = null;
-    private static int $datacenterId = 0;
+
+    // 毫秒内数列(0-4095)
     private static int $sequence = 0;
+    // 上传生成ID的时间戳
     private static int $lastTimestamp = -1;
-    private static int $maxWorkerId = -1 ^ (-1 << 5);
     private static ?string $localIP = null;
+
+    protected static function getDatacenterId(): int
+    {
+        if (self::$datacenterId === null) {
+            $ipNum = ip2long(self::getLocalIP());
+            self::$datacenterId = $ipNum % 31;
+        }
+        return self::$datacenterId;
+    }
 
     protected static function getWorkerId(): int
     {
-        if (self::$workerId === null) {
-            $ipNum = ip2long(self::getLocalIP());
-            self::$workerId = $ipNum % self::$maxWorkerId;
+        if (self::$workerId=== null) {
+            $pid = getmypid() ?: 0;
+            self::$workerId = $pid % 31;
         }
         return self::$workerId;
     }
 
     public static function nextId(): int
     {
-        $timestamp = static::timeGen();
+        $timestamp = DateUtil::nowTimeMillis();
 
         if ($timestamp == static::$lastTimestamp) {
             static::$sequence = (static::$sequence + 1) & 4095; // 序列号循环使用，最大4095
@@ -57,23 +73,19 @@ class SnowflakeUtil
         static::$lastTimestamp = $timestamp;
 
         return (($timestamp - static::$epoch) << 22)
-            | (static::$datacenterId << 17)
+            | (static::getDatacenterId() << 17)
             | static::getWorkerId() << 5
             | static::$sequence;
     }
 
     private static function tilNextMillis($lastTimestamp): int
     {
-        $timestamp = static::timeGen();
+        $timestamp = DateUtil::nowTimeMillis();
         while ($timestamp <= $lastTimestamp) {
-            $timestamp = static::timeGen();
+            usleep(100);
+            $timestamp = DateUtil::nowTimeMillis();
         }
         return $timestamp;
-    }
-
-    private static function timeGen(): int
-    {
-        return (int)(microtime(true) * 1000); // 毫秒级时间戳
     }
 
     /**
