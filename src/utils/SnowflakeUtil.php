@@ -21,10 +21,9 @@ class SnowflakeUtil
 {
     /**
      * 时间起始标记点，作为基准，一般取系统的最近时间（一旦确定不能变动）
-     * 2025-01-01 00:00:00.000
      * @var int
      */
-    private static int $epoch = 1735660800000;
+    private static int $epoch = 1288834974657;
 
     // 机器ID(0-31)
     private static ?int $datacenterId = null;
@@ -37,6 +36,17 @@ class SnowflakeUtil
     // 上传生成ID的时间戳
     private static int $lastTimestamp = -1;
     private static ?string $localIP = null;
+
+    /**
+     * 设置时间起始标记点
+     * @param int $epoch
+     * @date 2025/10/9 下午5:21
+     * @author 原点 467490186@qq.com
+     */
+    public static function setEpoch(int $epoch): void
+    {
+        self::$epoch = $epoch;
+    }
 
     protected static function getDatacenterId(): int
     {
