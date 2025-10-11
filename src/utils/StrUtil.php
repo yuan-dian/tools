@@ -15,6 +15,10 @@ namespace yuandian\Tools\utils;
 
 class StrUtil
 {
+    private const DELIM_START = '{';
+    private const DELIM_STOP = '}';
+    private const ESCAPE_CHAR = '\\';
+    private const  FORMAT_SPECIFIER = '/%(\d+\$)?([-#+ 0,(<]*)?(\d+)?(\.\d+)?([tT])?([a-zA-Z%])/';
     protected static array $snakeCache = [];
 
     protected static array $camelCache = [];
@@ -109,16 +113,45 @@ class StrUtil
     }
 
     /**
-     * 格式化字符串 (类似sprintf)
-     * @param string $template
+     * 字符串占位符处理
+     * 包含printf风格和{}占位符两种模式的处理
+     * @param string $message
      * @param ...$args
      * @return string
      * @date 2025/7/23 上午10:45
      * @author 原点 467490186@qq.com
      */
-    public static function format(string $template, ...$args): string
+    public static function format(string $message, ...$args): string
     {
-        return sprintf($template, ...$args);
+        if (preg_match(self::FORMAT_SPECIFIER, $message)) {
+            return sprintf($message, ...$args);
+        }
+        $result = '';
+        $length = strlen($message);
+        $argIndex = 0;
+        $argCount = count($args);
+
+        for ($i = 0; $i < $length; $i++) {
+            if ($message[$i] === self::DELIM_START &&
+                $i + 1 < $length &&
+                $message[$i + 1] === self::DELIM_STOP) {
+                if ($argIndex < $argCount) {
+                    $result .= $args[$argIndex++];
+                    $i++;
+                } else {
+                    $result .= self::DELIM_START . self::DELIM_STOP;
+                    $i++;
+                }
+            } elseif ($message[$i] === self::ESCAPE_CHAR &&
+                $i + 1 < $length &&
+                $message[$i + 1] === self::DELIM_START) {
+                $result .= self::DELIM_START;
+                $i++;
+            } else {
+                $result .= $message[$i];
+            }
+        }
+        return $result;
     }
 
     /**
