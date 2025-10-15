@@ -15,7 +15,7 @@ namespace yuandian\Tools\utils;
 
 use DateTimeImmutable;
 use DateTimeInterface;
-use InvalidArgumentException;
+use yuandian\Tools\const\DateFormatConst;
 
 class DateUtil
 {
@@ -60,7 +60,7 @@ class DateUtil
      * @param string $format 格式(默认Y-m-d H:i:s)
      * @return string
      */
-    public static function format(DateTimeInterface $date, string $format = 'Y-m-d H:i:s'): string
+    public static function format(DateTimeInterface $date, string $format = DateFormatConst::NORM_DATE_TIME_PATTERN): string
     {
         return $date->format($format);
     }
@@ -70,7 +70,7 @@ class DateUtil
      * @param string $dateStr 时间字符串
      * @param string $format 输入格式(默认Y-m-d H:i:s)
      */
-    public static function parse(string $dateStr, string $format = 'Y-m-d H:i:s'): DateTimeImmutable
+    public static function parse(string $dateStr, string $format = DateFormatConst::NORM_DATE_TIME_PATTERN): DateTimeImmutable
     {
         return DateTimeImmutable::createFromFormat($format, $dateStr);
     }
@@ -115,7 +115,7 @@ class DateUtil
      */
     public static function beginOfDay(DateTimeInterface $date): DateTimeImmutable
     {
-        return self::parse($date->format('Y-m-d') . ' 00:00:00');
+        return self::parse($date->format(DateFormatConst::NORM_DATE_PATTERN) . ' 00:00:00');
     }
 
     /**
@@ -123,7 +123,7 @@ class DateUtil
      */
     public static function endOfDay(DateTimeInterface $date): DateTimeImmutable
     {
-        return self::parse($date->format('Y-m-d') . ' 23:59:59');
+        return self::parse($date->format(DateFormatConst::NORM_DATE_PATTERN) . ' 23:59:59');
     }
 
     /**

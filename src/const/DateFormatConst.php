@@ -13,7 +13,8 @@ namespace yuandian\Tools\const;
 
 interface DateFormatConst
 {
-    public const  NORM_DATE_PATTERN = "Y-m-d H:i:s";
+    public const  NORM_DATE_PATTERN = "Y-m-d";
+    public const  NORM_DATE_TIME_PATTERN = "Y-m-d H:i:s";
     public const  NORM_TIME_PATTERN = "H:i:s";
     public const  NORM_DATETIME_MINUTE_PATTERN = "Y-m-d H:i";
     public const  NORM_DATETIME_PATTERN = "Y-m-d H:i:s";
