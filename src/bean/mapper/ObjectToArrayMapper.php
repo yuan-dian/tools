@@ -18,6 +18,7 @@ use UnitEnum;
 use yuandian\Tools\attribute\Alias;
 use yuandian\Tools\attribute\ArrayOf;
 use yuandian\Tools\attribute\Skip;
+use yuandian\Tools\lang\ScalarObject;
 use yuandian\Tools\reflection\ClassReflector;
 use yuandian\Tools\reflection\PropertyReflection;
 
@@ -44,10 +45,10 @@ class ObjectToArrayMapper
         $arrayProperties = [];
         foreach ($class->getPublicProperties() as $property) {
             // 判断属性是否初始化
-            if(!$property->isInitialized($from)) {
+            if (!$property->isInitialized($from)) {
                 continue;
             }
-            if($property->hasAttribute(Skip::class)) {
+            if ($property->hasAttribute(Skip::class)) {
                 continue;
             }
             $fieldName = $this->resolvePropertyName($property);
@@ -137,6 +138,10 @@ class ObjectToArrayMapper
         }
         if (is_array($value) && $property->getAttribute(ArrayOf::class)) {
             return array_map(fn($item) => $this->map($item), $value);
+        }
+        // 处理自定义标量对象
+        if ($value instanceof ScalarObject) {
+            return $value->getValue();
         }
         // 处理对象
         if (is_object($value)) {

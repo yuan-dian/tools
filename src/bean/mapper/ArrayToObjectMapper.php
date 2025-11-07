@@ -23,6 +23,7 @@ use yuandian\Tools\attribute\ArrayOf;
 use yuandian\Tools\attribute\MapTo;
 use yuandian\Tools\attribute\Skip;
 use yuandian\Tools\attribute\Trim;
+use yuandian\Tools\lang\ScalarObject;
 use yuandian\Tools\reflection\ClassReflector;
 use yuandian\Tools\reflection\PropertyReflection;
 
@@ -141,7 +142,10 @@ class ArrayToObjectMapper
         if (is_subclass_of($typeName, UnitEnum::class)) {
             return $this->createEnum($typeName, $value);
         }
-
+        // 处理自定义标量对象
+        if (is_subclass_of($typeName, ScalarObject::class)) {
+            return new $typeName($value);
+        }
         // 处理嵌套对象
         if (class_exists($typeName)) {
             return $this->map($value, $typeName);
