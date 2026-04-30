@@ -51,9 +51,28 @@ trait AttributesTrait
     public function getAttributes(string $attributeClass): array
     {
         return array_map(
-            fn (ReflectionAttribute $attribute) => $attribute->newInstance(),
+            fn(ReflectionAttribute $attribute) => $attribute->newInstance(),
             $this->getReflection()->getAttributes($attributeClass, ReflectionAttribute::IS_INSTANCEOF),
         );
+    }
+
+    /**
+     * 沿继承链向上查找指定类注解
+     * @template AttributeClass of object
+     * @param class-string<AttributeClass> $attributeClass
+     * @return AttributeClass|null
+     */
+    public function getAttributeFromHierarchy(string $attributeClass): ?object
+    {
+        $ref = $this->getReflection();
+        while ($ref !== false && $ref->getName() !== self::class) {
+            $attrs = $ref->getAttributes($attributeClass, ReflectionAttribute::IS_INSTANCEOF);
+            if (!empty($attrs)) {
+                return $attrs[0]->newInstance();
+            }
+            $ref = $ref->getParentClass();
+        }
+        return null;
     }
 
 }
