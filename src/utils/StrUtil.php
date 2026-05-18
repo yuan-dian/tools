@@ -58,7 +58,10 @@ class StrUtil
      */
     public static function isBlank(?string $str): bool
     {
-        return $str === null || trim($str) === '';
+        if ($str === null || $str === '') {
+            return true;
+        }
+        return ctype_space($str);
     }
 
     /**
@@ -72,6 +75,7 @@ class StrUtil
     {
         return !self::isBlank($str);
     }
+
     /**
      * 移除首尾空白字符 (支持null)
      * @param string|null $str
@@ -156,13 +160,13 @@ class StrUtil
 
     /**
      * 检查字符串中是否包含某些字符串
-     * @param string       $haystack
+     * @param string $haystack
      * @param array|string $needles
      * @return bool
      */
     public static function contains(string $haystack, array|string $needles): bool
     {
-        foreach ((array) $needles as $needle) {
+        foreach ((array)$needles as $needle) {
             if ('' != $needle && mb_strpos($haystack, $needle) !== false) {
                 return true;
             }
@@ -174,13 +178,13 @@ class StrUtil
     /**
      * 检查字符串是否以某些字符串结尾
      *
-     * @param  string       $haystack
+     * @param string $haystack
      * @param array|string $needles
      * @return bool
      */
     public static function endsWith(string $haystack, array|string $needles): bool
     {
-        foreach ((array) $needles as $needle) {
+        foreach ((array)$needles as $needle) {
             if (str_ends_with($haystack, $needle)) {
                 return true;
             }
@@ -192,13 +196,13 @@ class StrUtil
     /**
      * 检查字符串是否以某些字符串开头
      *
-     * @param  string       $haystack
+     * @param string $haystack
      * @param array|string $needles
      * @return bool
      */
     public static function startsWith(string $haystack, array|string $needles): bool
     {
-        foreach ((array) $needles as $needle) {
+        foreach ((array)$needles as $needle) {
             if (str_starts_with($haystack, $needle)) {
                 return true;
             }
@@ -211,7 +215,7 @@ class StrUtil
     /**
      * 字符串转小写
      *
-     * @param  string $value
+     * @param string $value
      * @return string
      */
     public static function lower(string $value): string
@@ -222,7 +226,7 @@ class StrUtil
     /**
      * 字符串转大写
      *
-     * @param  string $value
+     * @param string $value
      * @return string
      */
     public static function upper(string $value): string
@@ -233,7 +237,7 @@ class StrUtil
     /**
      * 获取字符串的长度
      *
-     * @param  string $value
+     * @param string $value
      * @return int
      */
     public static function length(string $value): int
@@ -244,21 +248,38 @@ class StrUtil
     /**
      * 截取字符串
      *
-     * @param  string   $string
-     * @param  int      $start
-     * @param  int|null $length
+     * @param string $str 原字符串
+     * @param int $fromIndex 起始位置（支持负数，表示从末尾开始）
+     * @param int|null $toIndex 结束位置（支持负数），null 表示到末尾
      * @return string
      */
-    public static function substr(string $string, int $start, ?int $length = null): string
+    public static function sub(string $str, int $fromIndex, ?int $toIndex = null): string
     {
-        return mb_substr($string, $start, $length, 'UTF-8');
+        $len = mb_strlen($str);
+        if ($fromIndex < 0) {
+            $fromIndex += $len;
+        }
+        if ($toIndex === null) {
+            $toIndex = $len;
+        }
+        if ($toIndex < 0) {
+            $toIndex += $len;
+        }
+        $fromIndex = max(0, min($fromIndex, $len));
+        $toIndex = max(0, min($toIndex, $len));
+
+        if ($fromIndex >= $toIndex) {
+            return '';
+        }
+
+        return mb_substr($str, $fromIndex, $toIndex - $fromIndex);
     }
 
     /**
      * 驼峰转下划线
      *
-     * @param  string $value
-     * @param  string $delimiter
+     * @param string $value
+     * @param string $delimiter
      * @return string
      */
     public static function snake(string $value, string $delimiter = '_'): string
@@ -281,7 +302,7 @@ class StrUtil
     /**
      * 下划线转驼峰(首字母小写)
      *
-     * @param  string $value
+     * @param string $value
      * @return string
      */
     public static function camel(string $value): string
@@ -296,7 +317,7 @@ class StrUtil
     /**
      * 下划线转驼峰(首字母大写)
      *
-     * @param  string $value
+     * @param string $value
      * @return string
      */
     public static function studly(string $value): string
@@ -315,7 +336,7 @@ class StrUtil
     /**
      * 转为首字母大写的标题格式
      *
-     * @param  string $value
+     * @param string $value
      * @return string
      */
     public static function title(string $value): string
@@ -323,5 +344,96 @@ class StrUtil
         return mb_convert_case($value, MB_CASE_TITLE, 'UTF-8');
     }
 
+    /**
+     * 首字母大写
+     */
+    public static function upperFirst(string $str): string
+    {
+        if (static::isEmpty($str)) {
+            return $str;
+        }
+        return ucfirst($str);
+    }
+
+    /**
+     * 首字母小写
+     */
+    public static function lowerFirst(string $str): string
+    {
+        if (static::isEmpty($str)) {
+            return $str;
+        }
+        return lcfirst($str);
+    }
+
+    /**
+     * 左填充
+     */
+    public static function padBefore(string $str, int $length, string $padStr = ' '): string
+    {
+        return str_pad($str, $length, $padStr, STR_PAD_LEFT);
+    }
+
+    /**
+     * 右填充
+     */
+    public static function padAfter(string $str, int $length, string $padStr = ' '): string
+    {
+        return str_pad($str, $length, $padStr, STR_PAD_RIGHT);
+    }
+
+    /**
+     * 是否为纯数字
+     */
+    public static function isNumeric(string $str): bool
+    {
+        return $str !== '' && ctype_digit($str);
+    }
+
+    /**
+     * 是否为纯字母
+     */
+    public static function isAlpha(string $str): bool
+    {
+        return $str !== '' && ctype_alpha($str);
+    }
+
+    /**
+     * 是否为字母和数字
+     */
+    public static function isAlphaNumeric(string $str): bool
+    {
+        return $str !== '' && ctype_alnum($str);
+    }
+
+    /**
+     * 是否全为中文字符
+     */
+    public static function isChinese(string $str): bool
+    {
+        return (bool)preg_match('/^[\x{4e00}-\x{9fa5}]+$/u', $str);
+    }
+
+    /**
+     * 是否包含中文字符
+     */
+    public static function containsChinese(string $str): bool
+    {
+        return (bool)preg_match('/[\x{4e00}-\x{9fa5}]/u', $str);
+    }
+
+    /**
+     * 空安全的字符串比较
+     */
+    public static function equals(?string $str1, ?string $str2, bool $ignoreCase = false): bool
+    {
+        if ($str1 === $str2) {
+            return true;
+        }
+        if ($str1 === null || $str2 === null) {
+            return false;
+        }
+        return $ignoreCase ? strcasecmp($str1, $str2) === 0 : $str1 === $str2;
+    }
 
 }

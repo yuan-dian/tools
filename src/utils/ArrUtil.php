@@ -67,6 +67,22 @@ class ArrUtil
     }
 
     /**
+     * 安全获取数组元素
+     */
+    public static function get(array $array, int|string $key, mixed $defaultValue = null): mixed
+    {
+        return $array[$key] ?? $defaultValue;
+    }
+
+    /**
+     * 安全设置数组元素
+     */
+    public static function set(array &$array, int|string $key, mixed $value): void
+    {
+        $array[$key] = $value;
+    }
+
+    /**
      * 查找元素首次出现的索引 (找不到返回-1)
      * @param array $array
      * @param $element
@@ -220,6 +236,21 @@ class ArrUtil
     public static function join(array $array, string $separator = ","): string
     {
         return implode($separator, $array);
+    }
+
+    /**
+     * 数组分块
+     *
+     * @param array $array
+     * @param int $size 每块大小
+     * @return array[]
+     */
+    public static function chunk(array $array, int $size): array
+    {
+        if ($size <= 0) {
+            throw new \InvalidArgumentException('Size must be positive');
+        }
+        return array_chunk($array, $size);
     }
 
     /**
@@ -692,4 +723,29 @@ class ArrUtil
 
         return $result;
     }
+
+    /**
+     * 取交集
+     */
+    public static function intersection(array $array1, array $array2): array
+    {
+        return array_values(array_intersect($array1, $array2));
+    }
+
+    /**
+     * 取差集
+     */
+    public static function diff(array $array1, array $array2): array
+    {
+        return array_values(array_diff($array1, $array2));
+    }
+
+    /**
+     * 取并集
+     */
+    public static function union(array $array1, array $array2): array
+    {
+        return array_values(array_unique(array_merge($array1, $array2)));
+    }
+    
 }

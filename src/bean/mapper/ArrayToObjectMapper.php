@@ -1,6 +1,6 @@
 <?php
 // +----------------------------------------------------------------------
-// | 
+// | 数组转对象映射器
 // +----------------------------------------------------------------------
 // | @copyright (c) 原点 All rights reserved.
 // +----------------------------------------------------------------------
@@ -9,7 +9,7 @@
 // | Date: 2025/7/17
 // +----------------------------------------------------------------------
 
-declare (strict_types=1);
+declare(strict_types=1);
 
 namespace yuandian\Tools\bean\mapper;
 
@@ -27,84 +27,76 @@ use yuandian\Tools\reflection\ClassReflector;
 use yuandian\Tools\reflection\PropertyReflection;
 
 /**
- * 数组转对象
+ * 数组转对象映射器
  */
 class ArrayToObjectMapper
 {
-    private const BUILTIN_TYPES = ['int' => true, 'float' => true, 'string' => true, 'bool' => true, 'array' => true];
-
     /**
-     * @param array $from
-     * @param string|object $to
+     * @param array $from 源数据
+     * @param string|object $to 目标类名或对象实例
      * @return object
      * @throws \ReflectionException
-     * @date 2025/7/18 下午2:10
-     * @author 原点 467490186@qq.com
+     * @throws \InvalidArgumentException
      */
     public function map(array $from, string|object $to): object
     {
-        $reflectionClass = new ClassReflector($to);
-        $object = is_string($to) ? $reflectionClass->newInstanceWithoutConstructor() : $to;
+        $reflector = new ClassReflector($to);
+        $object = is_string($to) ? $reflector->newInstanceWithoutConstructor() : $to;
 
-
-        foreach ($reflectionClass->getPublicProperties() as $property) {
+        foreach ($reflector->getPublicProperties() as $property) {
             if ($property->hasAttribute(Skip::class)) {
                 continue;
             }
+
             $propertyName = $property->resolvePropertyName();
 
             if (!array_key_exists($propertyName, $from)) {
                 continue;
             }
-            $value = $this->resolveValue($property, $from[$propertyName], $property->getType());
 
+            $value = $this->resolveValue($property, $from[$propertyName], $property->getType());
             $property->setValue($object, $value);
         }
+
         return $object;
     }
 
     /**
+     * 解析并转换值
+     *
      * @param PropertyReflection $property
      * @param mixed $value
      * @param ReflectionType|null $type
      * @return mixed
      * @throws \ReflectionException
-     * @date 2025/7/18 下午2:40
-     * @author 原点 467490186@qq.com
      */
     public function resolveValue(PropertyReflection $property, mixed $value, ?ReflectionType $type): mixed
     {
-        // 处理null值
+        // null 值处理
         if ($value === null && $type?->allowsNull()) {
             return null;
         }
 
-        // 字符串预处理
+        // 字符串预处理（Trim 等）
         if (is_string($value)) {
             $value = $this->preprocessString($value, $property);
         }
-        // 无类型声明时直接返回值
+
+        // 无类型声明时直接返回
         if ($type === null) {
             return $value;
         }
+
         return match (true) {
-            // 处理单一类型
             $type instanceof ReflectionNamedType => $this->handleNamedType($value, $type, $property),
-            // 处理联合类型
             $type instanceof ReflectionUnionType => $this->handleUnionType($value, $type, $property),
-            // 处理交叉类型
             $type instanceof ReflectionIntersectionType => $this->handleIntersectionType($value, $type, $property),
-            default => $value
+            default => $value,
         };
     }
 
     /**
      * 字符串预处理
-     * @param string $value
-     * @param PropertyReflection $property
-     * @return string
-     * @date 2025/10/24 下午5:42
-     * @author 原点 467490186@qq.com
      */
     private function preprocessString(string $value, PropertyReflection $property): string
     {
@@ -113,14 +105,9 @@ class ArrayToObjectMapper
     }
 
     /**
-     * 处理单一类型
-     * @param mixed $value
-     * @param ReflectionNamedType $type
-     * @param PropertyReflection $property
-     * @return mixed
+     * 处理单一命名类型
+     *
      * @throws \ReflectionException
-     * @date 2025/7/18 下午2:35
-     * @author 原点 467490186@qq.com
      */
     private function handleNamedType(
         mixed $value,
@@ -128,66 +115,78 @@ class ArrayToObjectMapper
         PropertyReflection $property
     ): mixed {
         $typeName = $type->getName();
-        // 处理对象数组
+
+        // array 类型
         if ($typeName === 'array') {
             return $this->handleArrayType($value, $property);
         }
-        // 处理内置类型
+
+        // 内置标量类型
         if (isset(self::BUILTIN_TYPES[$typeName])) {
-            settype($value, $typeName);
-            return $value;
-        }
-        // 处理枚举类型
-        if (is_subclass_of($typeName, UnitEnum::class)) {
-            return $this->createEnum($typeName, $value);
+            return self::castBuiltin($value, $typeName);
         }
 
-        // 处理嵌套对象
+        // 枚举类型
+        if (is_subclass_of($typeName, UnitEnum::class)) {
+            return self::createEnum($typeName, $value);
+        }
+
+        // 嵌套对象
         if (class_exists($typeName)) {
+            if (!is_array($value)) {
+                throw new \InvalidArgumentException(
+                    sprintf(
+                        'Cannot map %s to %s: expected array, %s given',
+                        json_encode($value),
+                        $typeName,
+                        get_debug_type($value)
+                    )
+                );
+            }
             return $this->map($value, $typeName);
         }
+
         return $value;
     }
 
     /**
-     * 处理数组类型
+     * 处理 array 类型属性
+     *
      * @throws \ReflectionException
      */
     private function handleArrayType(mixed $value, PropertyReflection $property): array
     {
-        $attribute = $property->getAttribute(ArrayOf::class);
-        if (!$attribute) {
+        if (!is_array($value)) {
             return (array)$value;
         }
 
-        return $this->createObjectArray((array)$value, $attribute->className);
+        $attribute = $property->getAttribute(ArrayOf::class);
+        if (!$attribute) {
+            return $value;
+        }
+
+        return $this->createObjectArray($value, $attribute->className);
     }
 
     /**
-     * 创建对象列表
-     * @param array $values
-     * @param $className
-     * @return array
-     * @date 2025/7/18 下午1:59
+     * 将数组元素映射为对象列表
+     *
      * @throws \ReflectionException
-     * @author 原点 467490186@qq.com
      */
-    private function createObjectArray(array $values, $className): array
+    private function createObjectArray(array $values, string $className): array
     {
-        return array_map(fn($item) => is_array($item) ? $this->map($item, $className) : $item,
+        return array_map(
+            static fn($item) => is_array($item) ? $this->map($item, $className) : $item,
             $values
         );
     }
 
     /**
-     * 处理联合类型
-     * @param mixed $value
-     * @param ReflectionUnionType $type
-     * @param PropertyReflection $property
-     * @return mixed
-     * @date 2025/7/18 下午2:35
+     * 处理联合类型 (A|B|C)
+     *
+     * 优先精确匹配，其次逐个尝试转换。
+     *
      * @throws \ReflectionException
-     * @author 原点 467490186@qq.com
      */
     private function handleUnionType(
         mixed $value,
@@ -196,134 +195,169 @@ class ArrayToObjectMapper
     ): mixed {
         $valueTypeName = self::getPhpTypeName($value);
         $types = $type->getTypes();
-        // 优先匹配精确类型
+
+        // 1. 精确类型匹配
         foreach ($types as $subType) {
             if ($subType instanceof ReflectionNamedType && $valueTypeName === $subType->getName()) {
                 return $this->resolveValue($property, $value, $subType);
             }
         }
 
-        // 类型转换尝试
+        // 2. 逐个尝试转换（仅捕获转换相关异常）
         $errors = [];
         foreach ($types as $subType) {
             try {
                 return $this->resolveValue($property, $value, $subType);
-            } catch (\Throwable $e) {
-                $errors[] = $e->getMessage();
+            } catch (\InvalidArgumentException|\RuntimeException $e) {
+                $errors[] = $subType->getName() . ': ' . $e->getMessage();
             }
         }
+
         throw new \RuntimeException(
             sprintf(
-                'Union type conversion failed for value: %s. Errors: %s',
+                'Union type resolution failed for value %s. Tried types [%s]. Errors: %s',
                 json_encode($value),
-                implode('; ', $errors)
+                implode(', ', array_map(fn($t) => $t->getName(), $types)),
+                implode(' | ', $errors)
             )
         );
     }
 
     /**
-     * 获取PHP的原生类型名称
+     * 处理交叉类型 (A&B)
      *
-     * @param $value
-     * @return string
-     * @date 2024/8/23 11:57
-     * @author 原点 467490186@qq.com
-     */
-    private static function getPhpTypeName($value): string
-    {
-        $type = gettype($value);
-        return match ($type) {
-            'integer' => 'int',
-            'double' => 'float',
-            'boolean' => 'bool',
-            'NULL' => 'null',
-            default => $type,
-        };
-    }
-
-    /**
-     * 处理交叉类型
-     * @param mixed $value
-     * @param ReflectionIntersectionType $type
-     * @param PropertyReflection $property
-     * @return mixed
+     * 必须通过 #[MapTo] 指定具体实现类。
+     *
      * @throws \ReflectionException
-     * @date 2025/7/18 下午3:02
-     * @author 原点 467490186@qq.com
+     * @throws \RuntimeException
      */
     private function handleIntersectionType(
         mixed $value,
         ReflectionIntersectionType $type,
         PropertyReflection $property
     ): mixed {
-        // 1. 检查是否指定了具体实现类
-        $mapToAttributes = $property->getAttribute(MapTo::class);
-        if (!$mapToAttributes) {
+        $mapTo = $property->getAttribute(MapTo::class);
+
+        if (!$mapTo) {
             throw new \RuntimeException(
                 sprintf(
-                    '% attribute, and no implementation class of the cross-type is specified',
-                    $property->getName(),
+                    'Property "%s" has intersection type and requires a #[MapTo] attribute to specify the implementation class',
+                    $property->getName()
                 )
             );
         }
+
+        $targetClass = $mapTo->className;
+
+        // 验证目标类满足交叉类型的所有接口/父类约束
         foreach ($type->getTypes() as $subType) {
             if (!$subType instanceof ReflectionNamedType) {
                 continue;
             }
-            if (!is_subclass_of($mapToAttributes->className, $subType->getName())) {
+            if (!is_subclass_of($targetClass, $subType->getName()) && $targetClass !== $subType->getName()) {
                 throw new \RuntimeException(
                     sprintf(
-                        'The specified class: %s, does not satisfy the validation of the cross-type %s',
-                        $mapToAttributes->className,
+                        'Class "%s" does not satisfy intersection type constraint "%s"',
+                        $targetClass,
                         $subType->getName()
                     )
                 );
             }
         }
-        return $this->map($value, $mapToAttributes->className);
+
+        return $this->map($value, $targetClass);
+    }
+
+    // ========================================================================
+    // 辅助方法
+    // ========================================================================
+
+    private const BUILTIN_TYPES = [
+        'int'    => true,
+        'float'  => true,
+        'string' => true,
+        'bool'   => true,
+        'array'  => true,
+    ];
+
+    /**
+     * 内置类型强转 —— 比 settype 语义更清晰、性能更好
+     */
+    private static function castBuiltin(mixed $value, string $type): int|float|string|bool|array
+    {
+        return match ($type) {
+            'int' => (int)$value,
+            'float' => (float)$value,
+            'string' => (string)$value,
+            'bool' => (bool)$value,
+            'array' => (array)$value,
+        };
     }
 
     /**
-     * 处理枚举类型的赋值
-     *
-     * @param mixed $value
-     * @param string $enumClass
-     * @return mixed
+     * 获取 PHP 值的类型名（与反射类型名对齐）
      */
-    private static function createEnum(string $enumClass, mixed $value): mixed
+    private static function getPhpTypeName(mixed $value): string
     {
-        // 如果值已经是枚举类型，直接赋值
+        return match (true) {
+            is_int($value) => 'int',
+            is_float($value) => 'float',
+            is_bool($value) => 'bool',
+            is_string($value) => 'string',
+            is_array($value) => 'array',
+            is_null($value) => 'null',
+            is_object($value) => get_class($value),
+            default => gettype($value),
+        };
+    }
+
+    /**
+     * 枚举解析 —— 支持 BackedEnum 和 UnitEnum
+     *
+     * @throws \InvalidArgumentException
+     */
+    private static function createEnum(string $enumClass, mixed $value): UnitEnum
+    {
+        // 已是目标枚举实例
         if ($value instanceof $enumClass) {
             return $value;
         }
-        if (!is_string($value) && !is_int($value)) {
-            throw new \InvalidArgumentException(
-                sprintf(
-                    'Enum value must be string or int, %s given for enum %s',
-                    gettype($value),
-                    $enumClass
-                )
-            );
-        }
 
-        // 处理基础枚举类型
+        // BackedEnum: 用 tryFrom 精确匹配
         if (is_subclass_of($enumClass, BackedEnum::class)) {
-            $result = $enumClass::tryFrom($value);
-            if ($result !== null) {
-                return $result;
-            }
-        }
-
-        // 处理无值枚举
-        if (is_subclass_of($enumClass, UnitEnum::class)) {
-            if (is_string($value)) {
-                $result = constant("{$enumClass}::{$value}");
-                if ($result instanceof $enumClass) {
+            if (is_string($value) || is_int($value)) {
+                $result = $enumClass::tryFrom($value);
+                if ($result !== null) {
                     return $result;
                 }
             }
-        }
-        throw new \InvalidArgumentException("Invalid enum value: $value");
-    }
 
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'Invalid BackedEnum value for %s: %s (%s)',
+                    $enumClass,
+                    var_export($value, true),
+                    get_debug_type($value)
+                )
+            );
+        }
+        // UnitEnum (无值枚举)
+        if (is_subclass_of($enumClass, UnitEnum::class) && is_string($value)) {
+            $cases = $enumClass::cases();
+            foreach ($cases as $case) {
+                if ($case->name === $value) {
+                    return $case;
+                }
+            }
+        }
+
+        throw new \InvalidArgumentException(
+            sprintf(
+                'Invalid UnitEnum value for %s: %s (%s)',
+                $enumClass,
+                var_export($value, true),
+                get_debug_type($value)
+            )
+        );
+    }
 }
