@@ -15,6 +15,7 @@ namespace yuandian\Tools\reflection;
 
 use ReflectionMethod;
 use ReflectionParameter;
+use ReflectionType;
 
 class MethodReflector
 {
@@ -22,7 +23,8 @@ class MethodReflector
 
     public function __construct(
         private readonly ReflectionMethod $reflectionMethod,
-    ) {}
+    ) {
+    }
 
     public function getReflection(): ReflectionMethod
     {
@@ -57,6 +59,7 @@ class MethodReflector
         }
         return null;
     }
+
     public function getNumberOfParameters(): int
     {
         return $this->reflectionMethod->getNumberOfParameters();
@@ -90,13 +93,25 @@ class MethodReflector
     {
         return $this->reflectionMethod->getName();
     }
+
+    public function getReturnType(): ?ReflectionType
+    {
+        return $this->reflectionMethod->getReturnType();
+    }
+
     public function isStatic(): bool
     {
         return $this->reflectionMethod->isStatic();
     }
+
     public function isPublic(): bool
     {
         return $this->reflectionMethod->isPublic();
+    }
+
+    public function invoke($object, ...$args): mixed
+    {
+        return $this->reflectionMethod->invoke($object, ...$args);
     }
 
     public function __call(string $name, array $args = []): mixed

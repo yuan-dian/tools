@@ -14,11 +14,13 @@ declare (strict_types=1);
 namespace yuandian\Tools\reflection;
 
 use ReflectionProperty;
+use ReflectionType;
 use yuandian\Tools\attribute\Alias;
 
 class PropertyReflection
 {
     use AttributesTrait;
+
     public function __construct(
         private readonly ReflectionProperty $reflectionProperty,
     ) {
@@ -28,12 +30,13 @@ class PropertyReflection
     {
         return $this->reflectionProperty->getName();
     }
+
     public function getValue(object $object): mixed
     {
         return $this->reflectionProperty->getValue($object);
     }
 
-    public function getType(): \ReflectionIntersectionType|\ReflectionNamedType|\ReflectionUnionType|null
+    public function getType(): ?ReflectionType
     {
         return $this->reflectionProperty->getType();
     }
@@ -47,6 +50,7 @@ class PropertyReflection
     {
         return $this->reflectionProperty->isInitialized($object);
     }
+
     public function isPublic(): bool
     {
         return $this->reflectionProperty->isPublic();
