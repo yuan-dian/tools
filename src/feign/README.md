@@ -14,8 +14,20 @@ interface AppClient
     public function detail(
         #[RequestParam('appCode')] string $appCode
     ): AppDetailVO;
+    
+    #[FeignRoute('/list')]
+    #[ReturnType(AppDetailVO::class)]
+    public function list(
+        #[RequestParam('status')] int $status
+    ): array;
 
-    #[FeignRoute('/name')]
+    #[FeignRoute('/name')
+    #[ResponseMapping(
+        successCode: 200,
+        codeName: 'status',
+        messageName: 'msg',
+        bodyName: 'result',
+    )]
     public function getAppName(
         #[RequestParam('appCode')] string $appCode
     ): string;
@@ -74,7 +86,9 @@ abstract class PayClient implements \yuandian\Tools\feign\FeignFallback
     }
 }
 
-// 使用
+// 注册服务地址
+Feign::registerService('app-service', 'https://api.example.com');
+// 调用接口
 $app = Feign::create(AppClient::class);
 $detail = $app->detail('mall-app');
 ```
