@@ -5,9 +5,9 @@
 // ═══════════════════════════════════════════════════
 //  interface：简单场景，异常直接抛出，自动兜底处理的是网络异常
 // ═══════════════════════════════════════════════════
-use yuandian\Tools\feign\FeignClient;use yuandian\Tools\feign\FeignRoute;use yuandian\Tools\feign\ResponseCode;
+use yuandian\Tools\feign\FeignClient;use yuandian\Tools\feign\FeignRoute;use yuandian\Tools\feign\ResponseMapping;
 #[FeignClient(name: 'app-service', path: '/app')]
-#[ResponseCode(0)]
+#[ResponseMapping(0)]
 interface AppClient
 {
     #[FeignRoute('/detail')]
@@ -27,7 +27,7 @@ interface AppClient
 // ═══════════════════════════════════════════════════
 
 #[FeignClient(name: 'pay-service', path: '/pay')]
-#[ResponseCode(200)]
+#[ResponseMapping(200)]
 abstract class PayClient implements \yuandian\Tools\feign\FeignFallback
 {
     #[FeignRoute('/balance')]
