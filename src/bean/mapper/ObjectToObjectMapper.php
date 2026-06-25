@@ -26,11 +26,10 @@ class ObjectToObjectMapper
      * @date 2025/7/21 上午10:44
      * @author 原点 467490186@qq.com
      */
-    public function map(object $from, string|object $to): object
+    public static function map(object $from, string|object $to): object
     {
-        $fromArray = (new ObjectToArrayMapper)->map($from);
-        return (new ArrayToObjectMapper())->map($fromArray, $to);
-
+        $fromArray = ObjectToArrayMapper::map($from);
+        return ArrayToObjectMapper::map($fromArray, $to);
     }
 
 }

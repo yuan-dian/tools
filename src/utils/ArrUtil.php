@@ -615,7 +615,7 @@ class ArrUtil
      * @date 2025/7/23 上午11:41
      * @author 原点 467490186@qq.com
      */
-    public static function random(array $array, int $number = null): mixed
+    public static function random(array $array, ?int $number = null): mixed
     {
         $requested = is_null($number) ? 1 : $number;
 
@@ -747,5 +747,671 @@ class ArrUtil
     {
         return array_values(array_unique(array_merge($array1, $array2)));
     }
-    
+
+
+    /**
+     * 多维数组展平
+     * @param array $array
+     * @param int $depth 展开深度 (1=只展开一层)
+     * @return array
+     */
+    public static function flatten(array $array, int $depth = 1): array
+    {
+        $result = [];
+        foreach ($array as $item) {
+            if (is_array($item) && $depth > 0) {
+                $result = array_merge($result, self::flatten($item, $depth - 1));
+            } else {
+                $result[] = $item;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * 按字段分组
+     * @param array $array
+     * @param string|callable $key
+     * @return array
+     */
+    public static function groupBy(array $array, string|callable $key): array
+    {
+        $result = [];
+        foreach ($array as $item) {
+            $groupKey = is_callable($key) ? $key($item) : ($item[$key] ?? null);
+            $result[$groupKey][] = $item;
+        }
+        return $result;
+    }
+
+    /**
+     * 指定字段作为键
+     * @param array $array
+     * @param string|callable $key
+     * @return array
+     */
+    public static function keyBy(array $array, string|callable $key): array
+    {
+        $result = [];
+        foreach ($array as $item) {
+            $k = is_callable($key) ? $key($item) : ($item[$key] ?? null);
+            $result[$k] = $item;
+        }
+        return $result;
+    }
+
+    /**
+     * 提取指定字段值
+     * @param array $array
+     * @param string|array|null $key
+     * @param string|null $key2
+     * @return array
+     */
+    public static function pluck(array $array, string|array|null $key, string|null $key2 = null): array
+    {
+        $result = [];
+        foreach ($array as $item) {
+            if ($key2 !== null && is_array($item) && isset($item[$key][$key2])) {
+                $result[] = $item[$key][$key2];
+            } elseif (is_array($item) && isset($item[$key])) {
+                $result[] = $item[$key];
+            } elseif (is_callable($key)) {
+                $result[] = $key($item);
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * 获取第一个元素
+     * @param array $array
+     * @param mixed $default
+     * @return mixed
+     */
+    public static function first(array $array, mixed $default = null): mixed
+    {
+        return empty($array) ? $default : reset($array);
+    }
+
+    /**
+     * 获取最后一个元素
+     * @param array $array
+     * @param mixed $default
+     * @return mixed
+     */
+    public static function last(array $array, mixed $default = null): mixed
+    {
+        return empty($array) ? $default : end($array);
+    }
+
+    /**
+     * 获取第N个元素 (支持负数)
+     * @param array $array
+     * @param int $index
+     * @param mixed $default
+     * @return mixed
+     */
+    public static function nth(array $array, int $index, mixed $default = null): mixed
+    {
+        $count = count($array);
+        if ($index < 0) {
+            $index += $count;
+        }
+        return isset($array[$index]) ? $array[$index] : $default;
+    }
+
+    /**
+     * 获取并移除最后一个元素
+     * @param array $array
+     * @return array [被移除的元素, 剩余数组]
+     */
+    public static function pop(array $array): array
+    {
+        if (empty($array)) {
+            return [null, []];
+        }
+        $value = array_pop($array);
+        return [$value, $array];
+    }
+
+    /**
+     * 获取并移除第一个元素
+     * @param array $array
+     * @return array [被移除的元素, 剩余数组]
+     */
+    public static function shift(array $array): array
+    {
+        if (empty($array)) {
+            return [null, []];
+        }
+        $value = array_shift($array);
+        return [$value, $array];
+    }
+
+    /**
+     * 取前N个元素
+     * @param array $array
+     * @param int $count
+     * @return array
+     */
+    public static function take(array $array, int $count): array
+    {
+        return array_slice($array, 0, $count);
+    }
+
+    /**
+     * 丢弃前N个元素
+     * @param array $array
+     * @param int $count
+     * @return array
+     */
+    public static function drop(array $array, int $count): array
+    {
+        return array_slice($array, $count);
+    }
+
+    /**
+     * 压缩多个数组为元组数组
+     * @param array ...$arrays
+     * @return array
+     */
+    public static function zip(array ...$arrays): array
+    {
+        $result = [];
+        $minLength = min(array_map('count', $arrays));
+        for ($i = 0; $i < $minLength; $i++) {
+            $tuple = [];
+            foreach ($arrays as $array) {
+                $tuple[] = $array[$i];
+            }
+            $result[] = $tuple;
+        }
+        return $result;
+    }
+
+    /**
+     * 解压元组数组为多个数组
+     * @param array $array
+     * @return array
+     */
+    public static function unzip(array $array): array
+    {
+        $result = [];
+        foreach ($array as $tuple) {
+            foreach ($tuple as $i => $value) {
+                $result[$i][] = $value;
+            }
+        }
+        return array_values($result);
+    }
+
+    /**
+     * 键值互换
+     * @param array $array
+     * @return array
+     */
+    public static function flip(array $array): array
+    {
+        return array_flip($array);
+    }
+
+    /**
+     * 合并数组 (后面的覆盖前面的)
+     * @param array ...$arrays
+     * @return array
+     */
+    public static function merge(array ...$arrays): array
+    {
+        return array_merge(...$arrays);
+    }
+
+    /**
+     * 深度合并数组
+     * @param array $array1
+     * @param array $array2
+     * @return array
+     */
+    public static function mergeDeep(array $array1, array $array2): array
+    {
+        $merged = $array1;
+        foreach ($array2 as $key => $value) {
+            if (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
+                $merged[$key] = self::mergeDeep($merged[$key], $value);
+            } else {
+                $merged[$key] = $value;
+            }
+        }
+        return $merged;
+    }
+
+    /**
+     * 归约
+     * @param array $array
+     * @param callable $callback
+     * @param mixed $initial
+     * @return mixed
+     */
+    public static function reduce(array $array, callable $callback, mixed $initial = null): mixed
+    {
+        return array_reduce($array, $callback, $initial);
+    }
+
+    /**
+     * 遍历数组
+     * @param array $array
+     * @param callable $callback
+     * @return array
+     */
+    public static function each(array $array, callable $callback): array
+    {
+        foreach ($array as $key => $value) {
+            $callback($value, $key);
+        }
+        return $array;
+    }
+
+    /**
+     * 任一元素满足条件
+     * @param array $array
+     * @param callable $callback
+     * @return bool
+     */
+    public static function some(array $array, callable $callback): bool
+    {
+        foreach ($array as $key => $value) {
+            if ($callback($value, $key)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 全部元素满足条件
+     * @param array $array
+     * @param callable $callback
+     * @return bool
+     */
+    public static function every(array $array, callable $callback): bool
+    {
+        foreach ($array as $key => $value) {
+            if (!$callback($value, $key)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 包含所有指定元素
+     * @param array $array
+     * @param array $needles
+     * @return bool
+     */
+    public static function containsAll(array $array, array $needles): bool
+    {
+        foreach ($needles as $needle) {
+            if (!in_array($needle, $array, true)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 包含任一指定元素
+     * @param array $array
+     * @param array $needles
+     * @return bool
+     */
+    public static function containsAny(array $array, array $needles): bool
+    {
+        foreach ($needles as $needle) {
+            if (in_array($needle, $array, true)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 统计元素出现次数
+     * @param array $array
+     * @return array
+     */
+    public static function frequency(array $array): array
+    {
+        return array_count_values($array);
+    }
+
+    /**
+     * 计数 (带条件)
+     * @param array $array
+     * @param callable|null $callback
+     * @return int
+     */
+    public static function count(array $array, ?callable $callback = null): int
+    {
+        if ($callback === null) {
+            return count($array);
+        }
+        return count(self::filter($array, $callback));
+    }
+
+    /**
+     * 带回调的求和
+     * @param array $array
+     * @param callable|string $callback
+     * @return float|int
+     */
+    public static function sumOf(array $array, callable|string $callback): float|int
+    {
+        $sum = 0;
+        foreach ($array as $item) {
+            $value = is_callable($callback) ? $callback($item) : ($item[$callback] ?? 0);
+            $sum += $value;
+        }
+        return $sum;
+    }
+
+    /**
+     * 按字段取最大值元素
+     * @param array $array
+     * @param string $key
+     * @return mixed|null
+     */
+    public static function maxBy(array $array, string $key): mixed
+    {
+        if (empty($array)) {
+            return null;
+        }
+        $result = null;
+        $maxVal = PHP_INT_MIN;
+        foreach ($array as $item) {
+            $val = $item[$key] ?? null;
+            if ($val !== null && $val > $maxVal) {
+                $maxVal = $val;
+                $result = $item;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * 按字段取最小值元素
+     * @param array $array
+     * @param string $key
+     * @return mixed|null
+     */
+    public static function minBy(array $array, string $key): mixed
+    {
+        if (empty($array)) {
+            return null;
+        }
+        $result = null;
+        $minVal = PHP_INT_MAX;
+        foreach ($array as $item) {
+            $val = $item[$key] ?? null;
+            if ($val !== null && $val < $minVal) {
+                $minVal = $val;
+                $result = $item;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * 按字段排序
+     * @param array $array
+     * @param string $key
+     * @param bool $ascending
+     * @return array
+     */
+    public static function sortBy(array $array, string $key, bool $ascending = true): array
+    {
+        $sorted = $array;
+        usort($sorted, function ($a, $b) use ($key, $ascending) {
+            $cmp = ($a[$key] ?? null) <=> ($b[$key] ?? null);
+            return $ascending ? $cmp : -$cmp;
+        });
+        return $sorted;
+    }
+
+    /**
+     * 按键排序
+     * @param array $array
+     * @param bool $ascending
+     * @return array
+     */
+    public static function sortKeys(array $array, bool $ascending = true): array
+    {
+        $sorted = $array;
+        if ($ascending) {
+            ksort($sorted);
+        } else {
+            krsort($sorted);
+        }
+        return $sorted;
+    }
+
+    /**
+     * 扁平化映射
+     * @param array $array
+     * @param callable $callback
+     * @return array
+     */
+    public static function flatMap(array $array, callable $callback): array
+    {
+        $result = [];
+        foreach ($array as $item) {
+            $mapped = $callback($item);
+            if (is_array($mapped)) {
+                $result = array_merge($result, $mapped);
+            } else {
+                $result[] = $mapped;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * 带键的映射
+     * @param array $array
+     * @param callable $callback
+     * @return array
+     */
+    public static function mapWithKeys(array $array, callable $callback): array
+    {
+        $result = [];
+        foreach ($array as $item) {
+            [$key, $value] = $callback($item);
+            $result[$key] = $value;
+        }
+        return $result;
+    }
+
+    /**
+     * 分区 (根据条件分为两组)
+     * @param array $array
+     * @param callable $callback
+     * @return array [满足条件的, 不满足条件的]
+     */
+    public static function partition(array $array, callable $callback): array
+    {
+        $matching = [];
+        $nonMatching = [];
+        foreach ($array as $key => $item) {
+            if ($callback($item, $key)) {
+                $matching[] = $item;
+            } else {
+                $nonMatching[] = $item;
+            }
+        }
+        return [$matching, $nonMatching];
+    }
+
+    /**
+     * 滑动窗口
+     * @param array $array
+     * @param int $size
+     * @return array
+     */
+    public static function sliding(array $array, int $size): array
+    {
+        $result = [];
+        $length = count($array);
+        for ($i = 0; $i <= $length - $size; $i++) {
+            $result[] = array_slice($array, $i, $size);
+        }
+        return $result;
+    }
+
+    /**
+     * 累加
+     * @param array $array
+     * @return array
+     */
+    public static function accumulate(array $array): array
+    {
+        $result = [];
+        $sum = 0;
+        foreach ($array as $item) {
+            $sum += $item;
+            $result[] = $sum;
+        }
+        return $result;
+    }
+
+    /**
+     * 去重 (按字段)
+     * @param array $array
+     * @param string $key
+     * @return array
+     */
+    public static function uniqueByKey(array $array, string $key): array
+    {
+        $result = [];
+        foreach ($array as $item) {
+            $k = $item[$key] ?? null;
+            if (!isset($result[$k])) {
+                $result[$k] = $item;
+            }
+        }
+        return array_values($result);
+    }
+
+    /**
+     * 去重 (按字段值)
+     * @param array $array
+     * @param string $key
+     * @return array
+     */
+    public static function uniqueBy(array $array, string $key): array
+    {
+        return array_values(self::keyBy($array, $key));
+    }
+
+    /**
+     * 判断数组是否有重复元素
+     * @param array $array
+     * @return bool
+     */
+    public static function hasDuplicates(array $array): bool
+    {
+        return count($array) !== count(array_unique($array));
+    }
+
+    /**
+     * 数组转JSON
+     * @param array $array
+     * @param bool $pretty
+     * @return string
+     */
+    public static function toJson(array $array, bool $pretty = false): string
+    {
+        $flags = JSON_UNESCAPED_UNICODE;
+        if ($pretty) {
+            $flags |= JSON_PRETTY_PRINT;
+        }
+        return json_encode($array, $flags) ?: '[]';
+    }
+
+    /**
+     * JSON转数组
+     * @param string $json
+     * @return array
+     */
+    public static function fromJson(string $json): array
+    {
+        $result = json_decode($json, true);
+        return is_array($result) ? $result : [];
+    }
+
+    /**
+     * 检查数组是否为关联数组
+     * @param array $array
+     * @return bool
+     */
+    public static function isAssociative(array $array): bool
+    {
+        return !self::isList($array);
+    }
+
+    /**
+     * 数组转对象
+     * @param array $array
+     * @return object
+     */
+    public static function toObject(array $array): object
+    {
+        return (object)$array;
+    }
+
+    /**
+     * 对象转数组
+     * @param object $object
+     * @return array
+     */
+    public static function fromObject(object $object): array
+    {
+        return (array)$object;
+    }
+
+    /**
+     * 按大小分组
+     * @param array $array
+     * @param int $size
+     * @return array
+     */
+    public static function inGroupsOf(array $array, int $size): array
+    {
+        return array_chunk($array, $size, true);
+    }
+
+    /**
+     * 递归过滤空值
+     * @param array $array
+     * @return array
+     */
+    public static function filterNull(array $array): array
+    {
+        return array_filter($array, fn($v) => $v !== null && $v !== '' && $v !== []);
+    }
+
+    /**
+     * 递归映射键名
+     * @param array $array
+     * @param callable $callback
+     * @return array
+     */
+    public static function mapKeys(array $array, callable $callback): array
+    {
+        $result = [];
+        foreach ($array as $key => $value) {
+            $newKey = $callback($key, $value);
+            $result[$newKey] = is_array($value) ? self::mapKeys($value, $callback) : $value;
+        }
+        return $result;
+    }
+
 }

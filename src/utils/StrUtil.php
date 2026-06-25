@@ -436,4 +436,425 @@ class StrUtil
         return $ignoreCase ? strcasecmp($str1, $str2) === 0 : $str1 === $str2;
     }
 
+    /**
+     * 重复字符串
+     * @param string $str
+     * @param int $count
+     * @return string
+     */
+    public static function repeat(string $str, int $count): string
+    {
+        if ($count <= 0) {
+            return '';
+        }
+        return str_repeat($str, $count);
+    }
+
+    /**
+     * 反转字符串
+     * @param string $str
+     * @return string
+     */
+    public static function reverse(string $str): string
+    {
+        $result = '';
+        $length = mb_strlen($str);
+        for ($i = $length - 1; $i >= 0; $i--) {
+            $result .= mb_substr($str, $i, 1);
+        }
+        return $result;
+    }
+
+    /**
+     * 移除子串 (只移除第一个匹配)
+     * @param string $str
+     * @param string $search
+     * @return string
+     */
+    public static function remove(string $str, string $search): string
+    {
+        return str_replace($search, '', $str);
+    }
+
+    /**
+     * 移除所有匹配子串
+     * @param string $str
+     * @param string $search
+     * @return string
+     */
+    public static function removeAll(string $str, string $search): string
+    {
+        return str_replace($search, '', $str);
+    }
+
+    /**
+     * 替换子串
+     * @param string $str
+     * @param string $search
+     * @param string $replace
+     * @return string
+     */
+    public static function replace(string $str, string $search, string $replace): string
+    {
+        return str_replace($search, $replace, $str);
+    }
+
+    /**
+     * 按索引替换子串
+     * @param string $str
+     * @param int $start
+     * @param int|null $length
+     * @param string $replace
+     * @return string
+     */
+    public static function replaceRange(string $str, int $start, ?int $length, string $replace): string
+    {
+        $len = mb_strlen($str);
+        if ($start < 0) {
+            $start += $len;
+        }
+        if ($length === null) {
+            $length = $len - $start;
+        }
+        if ($length < 0) {
+            $length = $len - $start + $length;
+        }
+        $start = max(0, min($start, $len));
+        $length = max(0, min($length, $len - $start));
+        return mb_substr($str, 0, $start) . $replace . mb_substr($str, $start + $length);
+    }
+
+    /**
+     * 截断缩写 (超过长度时加省略号)
+     * @param string $str
+     * @param int $maxLength
+     * @param string $suffix
+     * @return string
+     */
+    public static function abbreviate(string $str, int $maxLength, string $suffix = '...'): string
+    {
+        if (mb_strlen($str) <= $maxLength) {
+            return $str;
+        }
+        $suffixLen = mb_strlen($suffix);
+        return mb_substr($str, 0, $maxLength - $suffixLen) . $suffix;
+    }
+
+    /**
+     * 空时返回默认值
+     * @param string|null $str
+     * @param string $default
+     * @return string
+     */
+    public static function defaultIfEmpty(?string $str, string $default): string
+    {
+        return self::isEmpty($str) ? $default : $str;
+    }
+
+    /**
+     * 空白时返回默认值
+     * @param string|null $str
+     * @param string $default
+     * @return string
+     */
+    public static function defaultIfBlank(?string $str, string $default): string
+    {
+        return self::isBlank($str) ? $default : $str;
+    }
+
+    /**
+     * 计算子串出现次数
+     * @param string $haystack
+     * @param string $needle
+     * @return int
+     */
+    public static function count(string $haystack, string $needle): int
+    {
+        if ($needle === '') {
+            return 0;
+        }
+        return mb_substr_count($haystack, $needle);
+    }
+
+    /**
+     * 查找子串位置 (从0开始，找不到返回-1)
+     * @param string $haystack
+     * @param string $needle
+     * @param int $offset
+     * @return int
+     */
+    public static function indexOf(string $haystack, string $needle, int $offset = 0): int
+    {
+        $pos = mb_strpos($haystack, $needle, $offset);
+        return $pos === false ? -1 : $pos;
+    }
+
+    /**
+     * 查找子串最后出现位置 (从0开始，找不到返回-1)
+     * @param string $haystack
+     * @param string $needle
+     * @return int
+     */
+    public static function lastIndexOf(string $haystack, string $needle): int
+    {
+        $pos = mb_strrpos($haystack, $needle);
+        return $pos === false ? -1 : $pos;
+    }
+
+    /**
+     * 居中填充
+     * @param string $str
+     * @param int $length
+     * @param string $padStr
+     * @return string
+     */
+    public static function center(string $str, int $length, string $padStr = ' '): string
+    {
+        return str_pad($str, $length, $padStr, STR_PAD_BOTH);
+    }
+
+    /**
+     * 包裹字符串
+     * @param string $str
+     * @param string $before
+     * @param string $after
+     * @return string
+     */
+    public static function wrap(string $str, string $before, ?string $after = null): string
+    {
+        if ($after === null) {
+            $after = $before;
+        }
+        return $before . $str . $after;
+    }
+
+    /**
+     * 大小写互换
+     * @param string $str
+     * @return string
+     */
+    public static function swapCase(string $str): string
+    {
+        $result = '';
+        $length = mb_strlen($str);
+        for ($i = 0; $i < $length; $i++) {
+            $char = mb_substr($str, $i, 1);
+            if (mb_strtolower($char) === $char) {
+                $result .= mb_strtoupper($char);
+            } else {
+                $result .= mb_strtolower($char);
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * 左截取
+     * @param string $str
+     * @param int $len
+     * @return string
+     */
+    public static function left(string $str, int $len): string
+    {
+        return mb_substr($str, 0, $len);
+    }
+
+    /**
+     * 右截取
+     * @param string $str
+     * @param int $len
+     * @return string
+     */
+    public static function right(string $str, int $len): string
+    {
+        $strLen = mb_strlen($str);
+        return mb_substr($str, max(0, $strLen - $len));
+    }
+
+    /**
+     * 中间截取
+     * @param string $str
+     * @param int $pos
+     * @param int $len
+     * @return string
+     */
+    public static function mid(string $str, int $pos, int $len): string
+    {
+        if ($len <= 0 || $pos >= mb_strlen($str)) {
+            return '';
+        }
+        return mb_substr($str, $pos, $len);
+    }
+
+    /**
+     * 截断字符串
+     * @param string $str
+     * @param int $maxLength
+     * @param string $suffix
+     * @return string
+     */
+    public static function truncate(string $str, int $maxLength, string $suffix = ''): string
+    {
+        if (mb_strlen($str) <= $maxLength) {
+            return $str;
+        }
+        return mb_substr($str, 0, $maxLength) . $suffix;
+    }
+
+    /**
+     * 前缀不存在时添加
+     * @param string $str
+     * @param string $prefix
+     * @return string
+     */
+    public static function prependIfMissing(string $str, string $prefix): string
+    {
+        return self::startsWith($str, $prefix) ? $str : $prefix . $str;
+    }
+
+    /**
+     * 后缀不存在时添加
+     * @param string $str
+     * @param string $suffix
+     * @return string
+     */
+    public static function appendIfMissing(string $str, string $suffix): string
+    {
+        return self::endsWith($str, $suffix) ? $str : $str . $suffix;
+    }
+
+    /**
+     * 移除前缀
+     * @param string $str
+     * @param string $prefix
+     * @return string
+     */
+    public static function removeStart(string $str, string $prefix): string
+    {
+        return self::startsWith($str, $prefix) ? mb_substr($str, mb_strlen($prefix)) : $str;
+    }
+
+    /**
+     * 移除后缀
+     * @param string $str
+     * @param string $suffix
+     * @return string
+     */
+    public static function removeEnd(string $str, string $suffix): string
+    {
+        return self::endsWith($str, $suffix) ? mb_substr($str, 0, mb_strlen($str) - mb_strlen($suffix)) : $str;
+    }
+
+    /**
+     * 转为kebab-case
+     * @param string $str
+     * @return string
+     */
+    public static function kebab(string $str): string
+    {
+        return str_replace('_', '-', self::snake($str));
+    }
+
+    /**
+     * 判断是否为纯空格
+     * @param string $str
+     * @return bool
+     */
+    public static function isWhitespace(string $str): bool
+    {
+        return $str !== '' && ctype_space($str);
+    }
+
+    /**
+     * 截取两个标记之间的内容
+     * @param string $str
+     * @param string $start
+     * @param string $end
+     * @return string|null
+     */
+    public static function substringBetween(string $str, string $start, string $end): ?string
+    {
+        $startPos = mb_strpos($str, $start);
+        if ($startPos === false) {
+            return null;
+        }
+        $startPos += mb_strlen($start);
+        $endPos = mb_strpos($str, $end, $startPos);
+        if ($endPos === false) {
+            return null;
+        }
+        return mb_substr($str, $startPos, $endPos - $startPos);
+    }
+
+    /**
+     * 分割字符串
+     * @param string $str
+     * @param string $separator
+     * @return array
+     */
+    public static function split(string $str, string $separator): array
+    {
+        return explode($separator, $str);
+    }
+
+    /**
+     * 连接数组为字符串
+     * @param array $array
+     * @param string $separator
+     * @return string
+     */
+    public static function join(array $array, string $separator = ','): string
+    {
+        return implode($separator, $array);
+    }
+
+    /**
+     * 是否匹配正则
+     * @param string $str
+     * @param string $regex
+     * @return bool
+     */
+    public static function matches(string $str, string $regex): bool
+    {
+        return (bool)preg_match($regex, $str);
+    }
+
+    /**
+     * 是否全部为数字 (支持负数和小数)
+     * @param string $str
+     * @return bool
+     */
+    public static function isNumericStrict(string $str): bool
+    {
+        return is_numeric($str);
+    }
+
+    /**
+     * 字符串哈希 (返回整数)
+     * @param string $str
+     * @return int
+     */
+    public static function hash(string $str): int
+    {
+        return crc32($str);
+    }
+
+    /**
+     * 随机字符串
+     * @param int $length
+     * @param string $chars
+     * @return string
+     */
+    public static function random(
+        int $length,
+        string $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    ): string {
+        $result = '';
+        $max = strlen($chars) - 1;
+        for ($i = 0; $i < $length; $i++) {
+            $result .= $chars[random_int(0, $max)];
+        }
+        return $result;
+    }
+
 }

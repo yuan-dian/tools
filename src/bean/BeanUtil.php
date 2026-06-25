@@ -34,23 +34,23 @@ class BeanUtil
     public static function copyProperties(array|object|string $from, string|object $to): object|array
     {
         if (is_object($from)) {
-            return (new ObjectToObjectMapper())->map($from, $to);
+            return ObjectToObjectMapper::map($from, $to);
         }
         if (array_is_list($from)) {
             $data = [];
             foreach ($from as $item) {
-                $data[] = (new ArrayToObjectMapper())->map($item, $to);
+                $data[] = ArrayToObjectMapper::map($item, $to);
             }
             return $data;
         }
         if (is_array($from)) {
-            return (new ArrayToObjectMapper())->map($from, $to);
+            return ArrayToObjectMapper::map($from, $to);
         }
         if (is_string($from)) {
             if (function_exists("json_validate") && !json_validate($from)) {
                 throw new \Exception("json_validate failed");
             }
-            return (new ArrayToObjectMapper())->map(json_decode($from, true), $to);
+            return ArrayToObjectMapper::map(json_decode($from, true), $to);
         }
     }
 
@@ -65,7 +65,7 @@ class BeanUtil
      */
     public static function arrayToObject(array $from, string|object $to): object
     {
-        return (new ArrayToObjectMapper())->map($from, $to);
+        return ArrayToObjectMapper::map($from, $to);
     }
 
     /**
@@ -81,7 +81,7 @@ class BeanUtil
     {
         $data = [];
         foreach ($from as $item) {
-            $data[] = (new ArrayToObjectMapper())->map($item, $to);
+            $data[] = ArrayToObjectMapper::map($item, $to);
         }
         return $data;
     }
@@ -96,7 +96,7 @@ class BeanUtil
      */
     public static function objectToArray(object $from): array
     {
-        return (new ObjectToArrayMapper())->map($from);
+        return ObjectToArrayMapper::map($from);
     }
 
     /**
@@ -110,12 +110,11 @@ class BeanUtil
      */
     public static function objectToObject(object $from, string|object $to): object
     {
-        return (new ObjectToObjectMapper())->map($from, $to);
+        return ObjectToObjectMapper::map($from, $to);
     }
 
     /**
      * json字符串转对象
-     * @template T of object
      * @param string $from
      * @param class-string<T> $to
      * @return T
@@ -129,7 +128,7 @@ class BeanUtil
         if (function_exists("json_validate") && !json_validate($from)) {
             throw new \Exception("json_validate failed");
         }
-        return (new ArrayToObjectMapper())->map(json_decode($from, true), $to);
+        return ArrayToObjectMapper::map(json_decode($from, true), $to);
     }
 
 }

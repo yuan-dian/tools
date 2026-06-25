@@ -38,7 +38,7 @@ class ArrayToObjectMapper
      * @throws \ReflectionException
      * @throws \InvalidArgumentException
      */
-    public function map(array $from, string|object $to): object
+    public static function map(array $from, string|object $to): object
     {
         $reflector = new ClassReflector($to);
         $object = is_string($to) ? $reflector->newInstanceWithoutConstructor() : $to;
@@ -54,7 +54,7 @@ class ArrayToObjectMapper
                 continue;
             }
 
-            $value = $this->resolveValue($property, $from[$propertyName], $property->getType());
+            $value = self::resolveValue($property, $from[$propertyName], $property->getType());
             $property->setValue($object, $value);
         }
 
@@ -70,7 +70,7 @@ class ArrayToObjectMapper
      * @return mixed
      * @throws \ReflectionException
      */
-    public function resolveValue(PropertyReflection $property, mixed $value, ?ReflectionType $type): mixed
+    public static function resolveValue(PropertyReflection $property, mixed $value, ?ReflectionType $type): mixed
     {
         // null 值处理
         if ($value === null && $type?->allowsNull()) {
@@ -79,7 +79,7 @@ class ArrayToObjectMapper
 
         // 字符串预处理（Trim 等）
         if (is_string($value)) {
-            $value = $this->preprocessString($value, $property);
+            $value = self::preprocessString($value, $property);
         }
 
         // 无类型声明时直接返回
@@ -88,9 +88,9 @@ class ArrayToObjectMapper
         }
 
         return match (true) {
-            $type instanceof ReflectionNamedType => $this->handleNamedType($value, $type, $property),
-            $type instanceof ReflectionUnionType => $this->handleUnionType($value, $type, $property),
-            $type instanceof ReflectionIntersectionType => $this->handleIntersectionType($value, $type, $property),
+            $type instanceof ReflectionNamedType => self::handleNamedType($value, $type, $property),
+            $type instanceof ReflectionUnionType => self::handleUnionType($value, $type, $property),
+            $type instanceof ReflectionIntersectionType => self::handleIntersectionType($value, $type, $property),
             default => $value,
         };
     }
@@ -98,7 +98,7 @@ class ArrayToObjectMapper
     /**
      * 字符串预处理
      */
-    private function preprocessString(string $value, PropertyReflection $property): string
+    private static function preprocessString(string $value, PropertyReflection $property): string
     {
         $trim = $property->getAttribute(Trim::class);
         return $trim ? trim($value, $trim->characters) : $value;
@@ -109,7 +109,7 @@ class ArrayToObjectMapper
      *
      * @throws \ReflectionException
      */
-    private function handleNamedType(
+    private static function handleNamedType(
         mixed $value,
         ReflectionNamedType $type,
         PropertyReflection $property
@@ -118,7 +118,7 @@ class ArrayToObjectMapper
 
         // array 类型
         if ($typeName === 'array') {
-            return $this->handleArrayType($value, $property);
+            return self::handleArrayType($value, $property);
         }
 
         // 内置标量类型
@@ -143,7 +143,7 @@ class ArrayToObjectMapper
                     )
                 );
             }
-            return $this->map($value, $typeName);
+            return self::map($value, $typeName);
         }
 
         return $value;
@@ -154,7 +154,7 @@ class ArrayToObjectMapper
      *
      * @throws \ReflectionException
      */
-    private function handleArrayType(mixed $value, PropertyReflection $property): array
+    private static function handleArrayType(mixed $value, PropertyReflection $property): array
     {
         if (!is_array($value)) {
             return (array)$value;
@@ -165,7 +165,7 @@ class ArrayToObjectMapper
             return $value;
         }
 
-        return $this->createObjectArray($value, $attribute->className);
+        return self::createObjectArray($value, $attribute->className);
     }
 
     /**
@@ -173,10 +173,10 @@ class ArrayToObjectMapper
      *
      * @throws \ReflectionException
      */
-    private function createObjectArray(array $values, string $className): array
+    private static function createObjectArray(array $values, string $className): array
     {
         return array_map(
-            static fn($item) => is_array($item) ? $this->map($item, $className) : $item,
+            static fn($item) => is_array($item) ? self::map($item, $className) : $item,
             $values
         );
     }
@@ -188,7 +188,7 @@ class ArrayToObjectMapper
      *
      * @throws \ReflectionException
      */
-    private function handleUnionType(
+    private static function handleUnionType(
         mixed $value,
         ReflectionUnionType $type,
         PropertyReflection $property
@@ -199,7 +199,7 @@ class ArrayToObjectMapper
         // 1. 精确类型匹配
         foreach ($types as $subType) {
             if ($subType instanceof ReflectionNamedType && $valueTypeName === $subType->getName()) {
-                return $this->resolveValue($property, $value, $subType);
+                return self::resolveValue($property, $value, $subType);
             }
         }
 
@@ -207,7 +207,7 @@ class ArrayToObjectMapper
         $errors = [];
         foreach ($types as $subType) {
             try {
-                return $this->resolveValue($property, $value, $subType);
+                return self::resolveValue($property, $value, $subType);
             } catch (\InvalidArgumentException|\RuntimeException $e) {
                 $errors[] = $subType->getName() . ': ' . $e->getMessage();
             }
@@ -231,7 +231,7 @@ class ArrayToObjectMapper
      * @throws \ReflectionException
      * @throws \RuntimeException
      */
-    private function handleIntersectionType(
+    private static function handleIntersectionType(
         mixed $value,
         ReflectionIntersectionType $type,
         PropertyReflection $property
@@ -265,7 +265,7 @@ class ArrayToObjectMapper
             }
         }
 
-        return $this->map($value, $targetClass);
+        return self::map($value, $targetClass);
     }
 
     // ========================================================================

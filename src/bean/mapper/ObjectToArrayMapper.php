@@ -33,7 +33,7 @@ class ObjectToArrayMapper
      * @date 2025/7/18 下午5:03
      * @author 原点 467490186@qq.com
      */
-    public function map(object $from): array
+    public static function map(object $from): array
     {
         // 优先使用toArray方法
         if (method_exists($from, 'toArray')) {
@@ -50,14 +50,14 @@ class ObjectToArrayMapper
             if($property->hasAttribute(Skip::class)) {
                 continue;
             }
-            $fieldName = $this->resolvePropertyName($property);
-            $propertyValue = $this->resolvePropertyValue($property, $from);
-            $arrayProperties[$fieldName] = $this->convertValueToArray($propertyValue, $fieldName, $property);
+            $fieldName = self::resolvePropertyName($property);
+            $propertyValue = self::resolvePropertyValue($property, $from);
+            $arrayProperties[$fieldName] = self::convertValueToArray($propertyValue, $fieldName, $property);
         }
         return $arrayProperties;
     }
 
-    private function resolvePropertyName(PropertyReflection $property): string
+    private static function resolvePropertyName(PropertyReflection $property): string
     {
         $alias = $property->getAttribute(Alias::class);
 
@@ -76,12 +76,12 @@ class ObjectToArrayMapper
      * @date 2025/7/18 下午5:03
      * @author 原点 467490186@qq.com
      */
-    private function resolvePropertyValue(PropertyReflection $property, object $object): mixed
+    private static function resolvePropertyValue(PropertyReflection $property, object $object): mixed
     {
         $propertyName = $property->getName();
 
         //  尝试通过getter方法获取值
-        $propertyValue = $this->getValueViaGetter($object, $propertyName);
+        $propertyValue = self::getValueViaGetter($object, $propertyName);
         // 尝试通过__get魔术方法
         if ($propertyValue === null && method_exists($object, '__get')) {
             $propertyValue = $object->__get($propertyName);
@@ -100,7 +100,7 @@ class ObjectToArrayMapper
      * @date 2025/7/18 下午5:03
      * @author 原点 467490186@qq.com
      */
-    private function getValueViaGetter(object $object, string $propertyName): mixed
+    private static function getValueViaGetter(object $object, string $propertyName): mixed
     {
         // 尝试 getFieldName()
         $getter = 'get' . ucfirst($propertyName);
@@ -126,7 +126,7 @@ class ObjectToArrayMapper
      * @date 2025/7/18 下午5:18
      * @author 原点 467490186@qq.com
      */
-    private function convertValueToArray(mixed $value, string $fieldName, PropertyReflection $property): mixed
+    private static function convertValueToArray(mixed $value, string $fieldName, PropertyReflection $property): mixed
     {
         if ($value === null) {
             return null;
@@ -136,11 +136,11 @@ class ObjectToArrayMapper
             return $value instanceof BackedEnum ? $value->value : $value->name;
         }
         if (is_array($value) && $property->getAttribute(ArrayOf::class)) {
-            return array_map(fn($item) => $this->map($item), $value);
+            return array_map(fn($item) => self::map($item), $value);
         }
         // 处理对象
         if (is_object($value)) {
-            return $this->map($value);
+            return self::map($value);
         }
 
         return $value;

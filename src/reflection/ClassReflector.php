@@ -24,6 +24,10 @@ class ClassReflector
     // 缓存已反射的类，以避免重复创建
     private static array $reflectionCache = [];
 
+    // 缓存属性列表，避免重复创建PropertyReflection数组
+    private static array $publicPropertiesCache = [];
+    private static array $allPropertiesCache = [];
+
     private readonly ReflectionClass $reflectionClass;
 
 
@@ -96,31 +100,43 @@ class ClassReflector
     }
 
     /**
-     * 获取对象公共属性
+     * 获取对象公共属性 (带缓存)
      * @return PropertyReflection[]
      * @date 2025/7/17 下午5:28
      * @author 原点 467490186@qq.com
      */
     public function getPublicProperties(): array
     {
-        return array_map(
-            fn(ReflectionProperty $property) => new PropertyReflection($property),
-            $this->reflectionClass->getProperties(ReflectionProperty::IS_PUBLIC),
-        );
+        $className = $this->reflectionClass->getName();
+
+        if (!isset(self::$publicPropertiesCache[$className])) {
+            self::$publicPropertiesCache[$className] = array_map(
+                fn(ReflectionProperty $property) => new PropertyReflection($property),
+                $this->reflectionClass->getProperties(ReflectionProperty::IS_PUBLIC),
+            );
+        }
+
+        return self::$publicPropertiesCache[$className];
     }
 
     /**
-     * 获取对象全部属性
+     * 获取对象全部属性 (带缓存)
      * @return PropertyReflection[]
      * @date 2025/7/17 下午5:28
      * @author 原点 467490186@qq.com
      */
     public function getProperties(): array
     {
-        return array_map(
-            fn(ReflectionProperty $property) => new PropertyReflection($property),
-            $this->reflectionClass->getProperties(),
-        );
+        $className = $this->reflectionClass->getName();
+
+        if (!isset(self::$allPropertiesCache[$className])) {
+            self::$allPropertiesCache[$className] = array_map(
+                fn(ReflectionProperty $property) => new PropertyReflection($property),
+                $this->reflectionClass->getProperties(),
+            );
+        }
+
+        return self::$allPropertiesCache[$className];
     }
 
     /**
