@@ -38,7 +38,7 @@ use yuandian\Tools\http\exception\RequestException;
  * Option::VERIFY          => bool    SSL 验证
  * Option::CERT            => string  证书路径
  * Option::PROXY           => string  代理地址
- * Option::AUTH            => array   [user, pass, type]
+ * Option::AUTH            => array   [type, user, pass]
  * Option::CURL            => array   原生 curl 选项
  */
 class HttpClient
@@ -202,29 +202,33 @@ class HttpClient
     // ========================= 并发 =========================
 
     /**
-     * 并发请求
+     * 并发请求（支持中间件和默认配置）
      *
-     * $responses = HttpClient::pool([
+     * $responses = $client->pool([
      *     [HttpMethod::GET,  'https://api.example.com/a'],
      *     [HttpMethod::POST, 'https://api.example.com/b', [Option::JSON => [...]]],
      * ]);
      */
-    public static function pool(array $requests, int $concurrency = 5): array
+    public function pool(array $requests, int $concurrency = 5): array
     {
         $multiHandle = curl_multi_init();
         $handles = [];
+        $startTimes = [];
 
         foreach ($requests as $index => $req) {
             $method = $req[0] ?? HttpMethod::GET;
             $url = $req[1] ?? '';
             $opts = $req[2] ?? [];
 
-            $client = new static();
-            $request = $client->buildRequest($method, $url, $opts);
+            // 使用当前实例的配置和中间件
+            $request = $this->buildRequest($method, $url, $opts);
+            $request = $this->middlewareStack->executePreMiddleware($request);
+
             $ch = curl_init();
             curl_setopt_array($ch, $request->buildCurlOptions());
             curl_multi_add_handle($multiHandle, $ch);
             $handles[$index] = $ch;
+            $startTimes[$index] = microtime(true);
         }
 
         $running = 0;
@@ -235,7 +239,8 @@ class HttpClient
 
         $responses = [];
         foreach ($handles as $index => $ch) {
-            $responses[$index] = self::collectResponse($ch);
+            $elapsed = microtime(true) - ($startTimes[$index] ?? microtime(true));
+            $responses[$index] = self::collectResponse($ch, $elapsed);
             curl_multi_remove_handle($multiHandle, $ch);
             curl_close($ch);
         }
@@ -285,9 +290,9 @@ class HttpClient
             default => null,
         };
 
-        // 认证
+        // 认证（统一格式：[type, user, pass]）
         if (isset($options[Option::AUTH])) {
-            [$user, $pass, $type] = array_pad($options[Option::AUTH], 3, AuthType::BASIC);
+            [$type, $user, $pass] = array_pad($options[Option::AUTH], 3, AuthType::BASIC);
             match ($type) {
                 AuthType::DIGEST => $req->withDigestAuth($user, $pass),
                 default => $req->withBasicAuth($user, $pass),
@@ -329,50 +334,54 @@ class HttpClient
         $responseHeaders = [];
         $curlOpts = $request->buildCurlOptions();
         $curlOpts[CURLOPT_HEADERFUNCTION] = function ($ch, $header) use (&$responseHeaders) {
-            $parts = explode(':', $header, 2);
-            if (count($parts) === 2) {
-                $responseHeaders[trim($parts[0])] = trim($parts[1]);
+            if (str_contains($header, ':')) {
+                $parts = explode(':', $header, 2);
+                $name = trim($parts[0]);
+                $value = trim($parts[1]);
+                // 支持同名 header（如 Set-Cookie）
+                $responseHeaders[$name][] = $value;
             }
             return strlen($header);
         };
 
         curl_setopt_array($ch, $curlOpts);
 
-        $startTime = microtime(true);
-        $body = curl_exec($ch);
-        $elapsed = microtime(true) - $startTime;
+        try {
+            $startTime = microtime(true);
+            $body = curl_exec($ch);
+            $elapsed = microtime(true) - $startTime;
 
-        if (curl_errno($ch)) {
-            $error = curl_error($ch);
+            if (curl_errno($ch)) {
+                $error = curl_error($ch);
+                $info = curl_getinfo($ch);
+                throw new RequestException(
+                    "cURL error [{$request->getMethod()} {$request->getUrl()}]: {$error}",
+                    $error,
+                    new Response(0, '', [], $info, $error, $elapsed)
+                );
+            }
+
             $info = curl_getinfo($ch);
-            curl_close($ch);
 
-            throw new RequestException(
-                "cURL error [{$request->getMethod()} {$request->getUrl()}]: {$error}",
-                $error,
-                new Response(0, '', [], $info, $error, $elapsed)
+            return new Response(
+                statusCode: $info['http_code'],
+                body: $body ?: '',
+                headers: $responseHeaders,
+                info: $info,
+                error: null,
+                elapsed: $elapsed
             );
+        } finally {
+            curl_close($ch);
         }
-
-        $info = curl_getinfo($ch);
-        curl_close($ch);
-
-        return new Response(
-            statusCode: $info['http_code'],
-            body: $body ?: '',
-            headers: $responseHeaders,
-            info: $info,
-            error: null,
-            elapsed: $elapsed
-        );
     }
 
-    private static function collectResponse(\CurlHandle $ch): Response
+    private static function collectResponse(\CurlHandle $ch, float $elapsed = 0): Response
     {
         $body = curl_multi_getcontent($ch);
 
         if (curl_errno($ch)) {
-            return new Response(0, '', [], curl_getinfo($ch), curl_error($ch));
+            return new Response(0, '', [], curl_getinfo($ch), curl_error($ch), $elapsed);
         }
 
         $info = curl_getinfo($ch);
@@ -381,9 +390,12 @@ class HttpClient
         $headers = [];
 
         foreach (explode("\r\n", trim($headerStr)) as $line) {
-            $parts = explode(':', $line, 2);
-            if (count($parts) === 2) {
-                $headers[trim($parts[0])] = trim($parts[1]);
+            if (str_contains($line, ':')) {
+                $parts = explode(':', $line, 2);
+                $name = trim($parts[0]);
+                $value = trim($parts[1]);
+                // 支持同名 header（如 Set-Cookie）
+                $headers[$name][] = $value;
             }
         }
 
@@ -392,6 +404,8 @@ class HttpClient
             body: substr($body, $headerSize),
             headers: $headers,
             info: $info,
+            error: null,
+            elapsed: $elapsed
         );
     }
 }

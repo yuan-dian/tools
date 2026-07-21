@@ -1,6 +1,6 @@
 <?php
 // +----------------------------------------------------------------------
-// | 
+// |
 // +----------------------------------------------------------------------
 // | @copyright (c) 原点 All rights reserved.
 // +----------------------------------------------------------------------
@@ -47,6 +47,30 @@ class MiddlewareStack
         };
 
         return $next($request);
+    }
+
+    /**
+     * 执行前置中间件（用于 pool 场景）
+     * 只执行中间件的前置逻辑，不执行 $next
+     */
+    public function executePreMiddleware(RequestData $request): RequestData
+    {
+        foreach ($this->middlewares as $middleware) {
+            $noop = function (RequestData $req): Response {
+                // 不执行实际请求，只返回 RequestData
+                return new Response(0, '');
+            };
+            $middleware->handle($request, $noop);
+        }
+        return $request;
+    }
+
+    /**
+     * 获取所有中间件
+     */
+    public function getMiddlewares(): array
+    {
+        return $this->middlewares;
     }
 
     public function count(): int

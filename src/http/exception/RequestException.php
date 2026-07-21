@@ -1,6 +1,6 @@
 <?php
 // +----------------------------------------------------------------------
-// | 
+// |
 // +----------------------------------------------------------------------
 // | @copyright (c) 原点 All rights reserved.
 // +----------------------------------------------------------------------
@@ -20,7 +20,8 @@ use yuandian\Tools\http\Response;
  */
 class RequestException extends HttpClientException
 {
-    private ?Response $response;
+    private readonly Response $response;
+    private readonly string $curlError;
 
     public function __construct(
         string $message,
@@ -30,17 +31,18 @@ class RequestException extends HttpClientException
         ?\Throwable $previous = null
     ) {
         parent::__construct($message, $code, $previous);
-        $this->response = $response;
+        $this->curlError = $curlError;
+        $this->response = $response ?? new Response(0, '');
     }
 
-    public function getResponse(): ?Response
+    public function getResponse(): Response
     {
         return $this->response;
     }
 
-    public function hasResponse(): bool
+    public function getCurlError(): string
     {
-        return $this->response !== null;
+        return $this->curlError;
     }
 
     /**
@@ -48,6 +50,6 @@ class RequestException extends HttpClientException
      */
     public function getStatusCode(): int
     {
-        return $this->response?->getStatusCode() ?? 0;
+        return $this->response->getStatusCode();
     }
 }
