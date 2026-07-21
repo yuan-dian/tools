@@ -3,7 +3,7 @@
 ```php
 
 // ═══════════════════════════════════════════════════
-//  interface：简单场景，异常直接抛出，自动兜底处理的是网络异常
+//  interface：简单场景，异常直接抛出
 // ═══════════════════════════════════════════════════
 use yuandian\Tools\feign\FeignClient;use yuandian\Tools\feign\FeignRoute;use yuandian\Tools\feign\ResponseMapping;
 #[FeignClient(name: 'app-service', path: '/app')]
@@ -40,7 +40,7 @@ interface AppClient
 
 #[FeignClient(name: 'pay-service', path: '/pay')]
 #[ResponseMapping(200)]
-abstract class PayClient implements \yuandian\Tools\feign\FeignFallback
+abstract class PayClient implements FeignFallbackFactory
 {
     #[FeignRoute('/balance')]
     abstract public function getBalance(
@@ -52,36 +52,23 @@ abstract class PayClient implements \yuandian\Tools\feign\FeignFallback
         #[RequestBody] OrderRO $order
     ): string;
 
-    /**
-     * 区分两种异常：
-     *   1. FeignException → 业务码不匹配（远程返回了，但业务失败）
-     *   2. 其它 Throwable → 网络超时、连接拒绝等
-     */
-    protected static function handleFallback(string $method, array $args, \Throwable|FeignException $e): mixed 
+   public static function create(\Throwable $e): object
     {
-        // ── 业务异常：远程服务返回了，但 code 不对 ──
-        if ($e instanceof FeignException) {
-            error_log(sprintf(
-                '[PayClient] %s 业务失败: code=%d msg=%s',
-                $method,
-                $e->getRemoteCode(),
-                $e->getRemoteMessage(),
-            ));
+        return new class($e) {
+            public function __construct(private readonly \Throwable $e)
+            {
+            }
 
-            return match ($method) {
-                // 创建订单失败，返回空串
-                'createOrder' => '',
-                // 其它业务异常：不吞掉，原样抛出让上层处理
-                default       => throw $e,
-            };
-        }
-
-        // ── 网络异常：超时、连接拒绝等 ──
-        error_log("[PayClient] {$method} 网络异常: {$e->getMessage()}");
-
-        return match ($method) {
-            'createOrder' => '',
-            default       => null,  // 网络异常可以兜底
+            public function getBalance(int $userId): array
+            {
+                error_log("getBalance 降级 ['reason' =>" . $this->e->getMessage() . "]");
+                return [];
+            }
+             public function createOrder(OrderRO $order): array
+            {
+                error_log("createOrder 降级 ['reason' =>" . $this->e->getMessage() . "]");
+                return [];
+            }
         };
     }
 }

@@ -6,31 +6,31 @@
 // +----------------------------------------------------------------------
 // | Author: 原点 <467490186@qq.com>
 // +----------------------------------------------------------------------
-// | Date: 2026/5/20
+// | Date: 2026/7/21
 // +----------------------------------------------------------------------
 
-declare (strict_types=1);
+declare(strict_types=1);
 
 namespace yuandian\Tools\feign;
 
 use Attribute;
 
 /**
- * Feign 路由注解
- * 
- * @param string $path 路由路径
- * @param string $method HTTP 方法（GET/POST/PUT/DELETE）
- * @param int $timeout 超时时间（秒），默认 5
- * @param int $retries 重试次数，默认 0（不重试）
+ * 请求头注解
+ * 用于注入自定义 HTTP Header
+ *
+ * 示例：
+ * #[FeignRoute('/data')]
+ * public function getData(
+ *     #[RequestParam('id')] int $id,
+ *     #[RequestHeader('Authorization')] string $token
+ * ): DataVO
  */
-#[Attribute(Attribute::TARGET_METHOD)]
-class FeignRoute
+#[Attribute(Attribute::TARGET_PARAMETER)]
+class RequestHeader
 {
     public function __construct(
-        public string $path,
-        public string $method = 'GET',
-        public int $timeout = 5,
-        public int $retries = 0,
+        public readonly ?string $name = null,
     ) {
     }
 }

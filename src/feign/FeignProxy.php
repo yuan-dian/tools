@@ -1,6 +1,6 @@
 <?php
 // +----------------------------------------------------------------------
-// | 
+// |
 // +----------------------------------------------------------------------
 // | @copyright (c) 原点 All rights reserved.
 // +----------------------------------------------------------------------
@@ -14,20 +14,24 @@ declare (strict_types=1);
 namespace yuandian\Tools\feign;
 
 use yuandian\Tools\bean\BeanUtil;
+use yuandian\Tools\http\constant\Option;
 use yuandian\Tools\http\HttpClient;
 use yuandian\Tools\reflection\ClassReflector;
 use yuandian\Tools\reflection\MethodReflector;
 
 class FeignProxy
 {
+    private static ?HttpClient $sharedClient = null;
+
     public function __construct(
         private readonly string $interfaceClass,
         private readonly ResponseMapping $responseMapping,
         private readonly array $staticMap,
+        private readonly ?\Closure $serviceResolver = null,
     ) {
     }
 
-    public function __call(string $method, array $args): mixed
+    public function __call(string $method, array $args = []): mixed
     {
         $ref = new ClassReflector($this->interfaceClass);
 
@@ -36,30 +40,51 @@ class FeignProxy
         $basePath = rtrim($clientAttr->path, '/');
         $serviceName = $clientAttr->name;
 
-        // 2. 解析方法注解 #[GetMapping] / #[PostMapping]
+        // 2. 解析方法注解
         $methodRef = $ref->getMethod($method);
-
         $route = $methodRef->getAttribute(FeignRoute::class);
         if (!$route) {
             throw new \BadMethodCallException("方法 [{$method}] 缺少路由注解");
         }
-        $body = $this->parseParams($methodRef, $args);
 
-        // 4. 发起请求（带降级）
-        try {
-            $baseUrl = $this->resolveBaseUrl($serviceName);
+        // 3. 解析参数
+        $parsedParams = $this->parseParams($methodRef, $args, $route->path);
+        $body = $parsedParams['body'] ?? [];
+        $fullPathTemplate = $parsedParams['fullPath'] ?? $route->path;
 
-            $fullPath = $baseUrl . $basePath . $route->path;
-            $http = new HttpClient([
-                'timeout' => 5,
-                'headers' => ['Accept' => 'application/json'],
-            ]);
-            $response = $http->request($route->method, $fullPath, $body);
+        // 4. 发起请求（带重试）
+        $maxRetries = $route->retries;
+        return $this->executeWithRetry(function () use (
+            $serviceName,
+            $basePath,
+            $fullPathTemplate,
+            $route,
+            $body,
+            $methodRef,
+            $ref,
+            $args
+        ) {
+            try {
+                $baseUrl = $this->resolveBaseUrl($serviceName);
+                $fullPath = $baseUrl . $basePath . $fullPathTemplate;
+                // 设置超时时间
+                $body[Option::TIMEOUT] = $route->timeout;
 
-            return $this->wrapResult($response->getBody(), $serviceName, $methodRef, $ref);
-        } catch (\Throwable $e) {
-            return $this->handleFallback($ref, $methodRef, $args, $e);
-        }
+                $response = $this->getHttpClient()->request($route->method, $fullPath, $body);
+
+                return $this->wrapResult($response->getBody(), $serviceName, $methodRef, $ref);
+            } catch (\Throwable $e) {
+                return $this->handleFallback($ref, $methodRef, $args, $e);
+            }
+        }, $maxRetries);
+    }
+
+    /**
+     * 获取共享 HttpClient 实例（连接池复用）
+     */
+    private function getHttpClient(): HttpClient
+    {
+        return self::$sharedClient ??= new HttpClient();
     }
 
     /**
@@ -67,12 +92,39 @@ class FeignProxy
      */
     private function resolveBaseUrl(string $serviceName): string
     {
-        // 优先静态
+        // 1. 优先静态注册
         if (isset($this->staticMap[$serviceName])) {
             return $this->staticMap[$serviceName];
         }
 
+        // 2. 使用自定义服务解析器（Nacos）
+        if ($this->serviceResolver) {
+            return ($this->serviceResolver)($serviceName);
+        }
+
         throw new \RuntimeException("服务 [{$serviceName}] 未配置地址且未初始化 Nacos");
+    }
+
+    /**
+     * 带重试的执行
+     */
+    private function executeWithRetry(callable $fn, int $maxRetries = 0): mixed
+    {
+        $lastException = null;
+        for ($i = 0; $i <= $maxRetries; $i++) {
+            try {
+                return $fn();
+            } catch (\Throwable $e) {
+                $lastException = $e;
+                // 业务异常不重试
+                if ($e instanceof FeignException || $i === $maxRetries) {
+                    throw $e;
+                }
+                // 网络异常重试
+                usleep(100 * 1000); // 100ms 延迟
+            }
+        }
+        throw $lastException;
     }
 
     /**
@@ -99,22 +151,48 @@ class FeignProxy
     /**
      * 解析方法参数上的注解
      */
-    private function parseParams(MethodReflector $ref, array $args): array
+    private function parseParams(MethodReflector $ref, array $args, string $routePath): array
     {
-        $data = [];
+        $data = ['body' => [], 'fullPath' => $routePath];
+
         foreach ($ref->getParameters() as $i => $param) {
             $value = $args[$i] ?? null;
+
+            // #[RequestParam] - 查询参数
             if ($attr = $param->getAttribute(RequestParam::class)) {
                 $key = $attr->name ?? $param->getName();
-                $data[$attr->bodyType][$key] = $value;
+                $data['body'][$attr->bodyType][$key] = $value;
             }
+
+            // #[RequestBody] - 请求体
             if ($attr = $param->getAttribute(RequestBody::class)) {
-                $data[$attr->bodyType] = array_merge(
-                    $data[$attr->bodyType] ?? [],
+                $data['body'][$attr->bodyType] = array_merge(
+                    $data['body'][$attr->bodyType] ?? [],
+                    BeanUtil::objectToArray($value)
+                );
+            }
+
+            // #[RequestHeader] - 自定义 Header
+            if ($attr = $param->getAttribute(RequestHeader::class)) {
+                $key = $attr->name ?? $param->getName();
+                $data['body'][Option::HEADERS][$key] = $value;
+            }
+
+            // #[PathVariable] - 路径参数
+            if ($attr = $param->getAttribute(PathVariable::class)) {
+                $key = $attr->name ?? $param->getName();
+                $data['fullPath'] = str_replace('{' . $key . '}', (string)$value, $data['fullPath']);
+            }
+
+            // #[QueryMap] - 对象展开为 query
+            if ($attr = $param->getAttribute(QueryMap::class)) {
+                $data['body'][Option::QUERY] = array_merge(
+                    $data['body'][Option::QUERY] ?? [],
                     BeanUtil::objectToArray($value)
                 );
             }
         }
+
         return $data;
     }
 
@@ -180,8 +258,7 @@ class FeignProxy
     }
 
     /**
-     * 优先级：
-     *   接口中定义了 handleFallback → 调用它
+     * 降级处理
      */
     private function handleFallback(
         ClassReflector $classRef,
@@ -189,37 +266,13 @@ class FeignProxy
         array $args,
         \Throwable $e,
     ): mixed {
-        // ── 检查接口中是否有 handleFallback 方法 ──
-        if ($classRef->hasMethod('handleFallback')) {
-            return $classRef->getMethod('handleFallback')->invoke(
-                null,    // static 方法
-                $methodRef->getName(),
-                $args,
-                $e
-            );
+        // 自定义异常处理
+        if ($classRef->hasMethod('create')) {
+            $factory = $classRef->getMethod('create')->invoke(null, $e);
+            if (method_exists($factory, $methodRef->getName())) {
+                return $factory->{$methodRef->getName()}(...$args);
+            }
         }
-        // 业务异常且没有自定义处理 → 直接抛出（不吞异常）
-        if ($e instanceof FeignException) {
-            throw $e;
-        }
-
-        // 网络异常 → 按类型自动兜底
-        return $this->autoFallback($methodRef, $e);
-    }
-
-    private function autoFallback(MethodReflector $methodRef, \Throwable $e): mixed
-    {
-        $t = $methodRef->getReturnType()?->getName() ?? 'mixed';
-
-        error_log("[Feign] {$methodRef->getName()} 网络异常降级: {$e->getMessage()}");
-
-        return match ($t) {
-            'int', 'integer' => 0,
-            'float', 'double' => 0.0,
-            'string' => '',
-            'bool', 'boolean' => false,
-            'array' => [],
-            default => null,
-        };
+        throw $e;
     }
 }

@@ -6,14 +6,19 @@
 // +----------------------------------------------------------------------
 // | Author: 原点 <467490186@qq.com>
 // +----------------------------------------------------------------------
-// | Date: 2026/5/20
+// | Date: 2026/5/21
 // +----------------------------------------------------------------------
+use yuandian\Tools\feign\Feign;
+use yuandian\Tools\Tests\entity\ShareInfoRO;
+use yuandian\Tools\Tests\feign\AppClient;
 
-declare (strict_types=1);
+require __DIR__ . '/../vendor/autoload.php';
 
-namespace yuandian\Tools\feign;
+Feign::registerService('uc-service', 'http://127.0.0.1:8788');
 
-interface FeignFallback
-{
-    public static function handleFallback(string $method, array $args, \Throwable|FeignException $e): mixed;
-}
+// ── 2. 创建客户端 ──
+/** @var AppClient $appClient */
+$appClient = Feign::create(AppClient::class);
+$result = $appClient->detail("7fb3ad4b50e4fa40");
+
+var_dump($result);
