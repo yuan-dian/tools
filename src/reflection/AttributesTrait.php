@@ -65,12 +65,16 @@ trait AttributesTrait
     public function getAttributeFromHierarchy(string $attributeClass): ?object
     {
         $ref = $this->getReflection();
-        while ($ref !== false && $ref->getName() !== self::class) {
+        while (true) {
             $attrs = $ref->getAttributes($attributeClass, ReflectionAttribute::IS_INSTANCEOF);
             if (!empty($attrs)) {
                 return $attrs[0]->newInstance();
             }
-            $ref = $ref->getParentClass();
+            $parent = $ref->getParentClass();
+            if ($parent === false) {
+                break;
+            }
+            $ref = $parent;
         }
         return null;
     }
